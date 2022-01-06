@@ -8,25 +8,25 @@
 import Foundation
 
 class AudioQueueDirector {
-    static let shared = AudioQueueDirector()
-    var closures: DirectorThreadSafeClosures<URL> = DirectorThreadSafeClosures()
-    private init() {}
+  static let shared = AudioQueueDirector()
+  var closures: DirectorThreadSafeClosures<URL> = DirectorThreadSafeClosures()
+  private init() {}
 
-    func create() {}
+  func create() {}
 
-    func clear() {
-        closures.clear()
-    }
+  func clear() {
+    closures.clear()
+  }
 
-    func attach(closure: @escaping (URL) throws -> Void) -> UInt {
-        return closures.attach(closure: closure)
-    }
+  func attach(closure: @escaping (URL) throws -> Void) -> UInt {
+    return closures.attach(closure: closure)
+  }
 
-    func detach(withID id: UInt) {
-        closures.detach(id: id)
-    }
-    
-    func changeInQueue(url: URL) {
-        closures.broadcast(payload: url)
-    }
+  func detach(withID id: UInt) {
+    closures.detach(id: id)
+  }
+
+  func changeInQueue(url: URL) {
+    closures.broadcast(payload: url)
+  }
 }

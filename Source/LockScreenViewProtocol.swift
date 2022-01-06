@@ -27,172 +27,172 @@ import Foundation
 import MediaPlayer
 import SwiftUI
 
-public protocol LockScreenViewPresenter : AnyObject {
-    func getIsPlaying() -> Bool
-    func handlePlay()
-    func handlePause()
-    func handleSkipBackward()
-    func handleSkipForward()
-    func handleSeek(toNeedle needle: Double)
+public protocol LockScreenViewPresenter: AnyObject {
+  func getIsPlaying() -> Bool
+  func handlePlay()
+  func handlePause()
+  func handleSkipBackward()
+  func handleSkipForward()
+  func handleSeek(toNeedle needle: Double)
 }
 
 // MARK: - Set up lockscreen audio controls
 // Documentation: https://developer.apple.com/documentation/avfoundation/media_assets_playback_and_editing/creating_a_basic_video_player_ios_and_tvos/controlling_background_audio
 public protocol LockScreenViewProtocol {
-    var skipForwardSeconds: Double { get set }
-    var skipBackwardSeconds: Double { get set }
+  var skipForwardSeconds: Double { get set }
+  var skipBackwardSeconds: Double { get set }
 }
 
 extension LockScreenViewProtocol {
   public func clearLockScreenInfo() {
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = [:]
-        let commandCenter = MPRemoteCommandCenter.shared()
-        commandCenter.playCommand.removeTarget(nil)
-        commandCenter.pauseCommand.removeTarget(nil)
-        commandCenter.skipBackwardCommand.removeTarget(nil)
-        commandCenter.skipForwardCommand.removeTarget(nil)
-        commandCenter.changePlaybackPositionCommand.removeTarget(nil)
-    }
-    
-    @available(iOS 10.0, tvOS 10.0, *)
+    MPNowPlayingInfoCenter.default().nowPlayingInfo = [:]
+    let commandCenter = MPRemoteCommandCenter.shared()
+    commandCenter.playCommand.removeTarget(nil)
+    commandCenter.pauseCommand.removeTarget(nil)
+    commandCenter.skipBackwardCommand.removeTarget(nil)
+    commandCenter.skipForwardCommand.removeTarget(nil)
+    commandCenter.changePlaybackPositionCommand.removeTarget(nil)
+  }
+
+  @available(iOS 10.0, tvOS 10.0, *)
   public func setLockScreenInfo(withMediaInfo info: SALockScreenInfo?, duration: Double) {
-        var nowPlayingInfo:[String : Any] = [:]
-        
-        guard let info = info else {
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = [:]
-            return
-        }
-        
-        let title = info.title
-        let artist = info.artist
-        let albumTitle = info.albumTitle ?? artist
-        let releaseDate = info.releaseDate
-        
-        // For some reason we need to set a duration here for the needle?
-        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = NSNumber(floatLiteral: duration)
-        
-        nowPlayingInfo[MPMediaItemPropertyTitle] = title
-        nowPlayingInfo[MPMediaItemPropertyArtist] = artist
-        nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = albumTitle
-        //nowPlayingInfo[MPMediaItemPropertyGenre] = //maybe later when we have it
-        //nowPlayingInfo[MPMediaItemPropertyIsExplicit] = //maybe later when we have it
-        nowPlayingInfo[MPMediaItemPropertyAlbumArtist] = artist
-        nowPlayingInfo[MPMediaItemPropertyMediaType] = MPMediaType.podcast.rawValue
-        nowPlayingInfo[MPMediaItemPropertyPodcastTitle] = title
-        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0 //because default is 1.0. If we pause audio then it keeps ticking
+    var nowPlayingInfo: [String: Any] = [:]
+
+    guard let info = info else {
+      MPNowPlayingInfoCenter.default().nowPlayingInfo = [:]
+      return
+    }
+
+    let title = info.title
+    let artist = info.artist
+    let albumTitle = info.albumTitle ?? artist
+    let releaseDate = info.releaseDate
+
+    // For some reason we need to set a duration here for the needle?
+    nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = NSNumber(floatLiteral: duration)
+
+    nowPlayingInfo[MPMediaItemPropertyTitle] = title
+    nowPlayingInfo[MPMediaItemPropertyArtist] = artist
+    nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = albumTitle
+    //nowPlayingInfo[MPMediaItemPropertyGenre] = //maybe later when we have it
+    //nowPlayingInfo[MPMediaItemPropertyIsExplicit] = //maybe later when we have it
+    nowPlayingInfo[MPMediaItemPropertyAlbumArtist] = artist
+    nowPlayingInfo[MPMediaItemPropertyMediaType] = MPMediaType.podcast.rawValue
+    nowPlayingInfo[MPMediaItemPropertyPodcastTitle] = title
+    nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0  //because default is 1.0. If we pause audio then it keeps ticking
     nowPlayingInfo[MPMediaItemPropertyReleaseDate] = Date(
       timeIntervalSince1970: TimeInterval(releaseDate))
 
-        if let artwork = info.artwork {
-            nowPlayingInfo[MPMediaItemPropertyArtwork] =
-            MPMediaItemArtwork(boundsSize: artwork.size) { size in
-                return artwork
-            }
-        } else {
+    if let artwork = info.artwork {
+      nowPlayingInfo[MPMediaItemPropertyArtwork] =
+        MPMediaItemArtwork(boundsSize: artwork.size) { size in
+          return artwork
+        }
+    } else {
       nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(
         boundsSize: PlatformImage().size
       ) { size in
         return PlatformImage()
-            }
-        }
-        
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+      }
     }
-    
-    // https://stackoverflow.com/questions/36754934/update-mpremotecommandcenter-play-pause-button
+
+    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+  }
+
+  // https://stackoverflow.com/questions/36754934/update-mpremotecommandcenter-play-pause-button
   public func setLockScreenControls(presenter: LockScreenViewPresenter) {
-        // Get the shared MPRemoteCommandCenter
-        let commandCenter = MPRemoteCommandCenter.shared()
-        
-        // Add handler for Play Command
-        commandCenter.playCommand.addTarget { [weak presenter] event in
-            guard let presenter = presenter else {
-                return .commandFailed
-            }
-            
-            if !presenter.getIsPlaying() {
-                presenter.handlePlay()
-                return .success
-            }
-            
-            return .commandFailed
-        }
-        
-        // Add handler for Pause Command
-        commandCenter.pauseCommand.addTarget { [weak presenter] event in
-            guard let presenter = presenter else {
-                return .commandFailed
-            }
-            
-            if presenter.getIsPlaying() {
-                presenter.handlePause()
-                return .success
-            }
-            
-            return .commandFailed
-        }
-        
-        commandCenter.skipBackwardCommand.preferredIntervals = [skipBackwardSeconds] as [NSNumber]
-        commandCenter.skipForwardCommand.preferredIntervals = [skipForwardSeconds] as [NSNumber]
-        
-        commandCenter.skipBackwardCommand.addTarget { [weak presenter] event in
-            guard let presenter = presenter else {
-                return .commandFailed
-            }
-            presenter.handleSkipBackward()
-            return .success
-        }
-        
-        commandCenter.skipForwardCommand.addTarget { [weak presenter] event in
-            guard let presenter = presenter else {
-                return .commandFailed
-            }
-            presenter.handleSkipForward()
-            return .success
-        }
-        
-        commandCenter.changePlaybackPositionCommand.addTarget { [weak presenter] event in
-            guard let presenter = presenter else {
-                return .commandFailed
-            }
-            if let positionEvent = event as? MPChangePlaybackPositionCommandEvent {
-                presenter.handleSeek(toNeedle: Needle(positionEvent.positionTime))
-                return .success
-            }
-            
-            return .commandFailed
-        }
+    // Get the shared MPRemoteCommandCenter
+    let commandCenter = MPRemoteCommandCenter.shared()
+
+    // Add handler for Play Command
+    commandCenter.playCommand.addTarget { [weak presenter] event in
+      guard let presenter = presenter else {
+        return .commandFailed
+      }
+
+      if !presenter.getIsPlaying() {
+        presenter.handlePlay()
+        return .success
+      }
+
+      return .commandFailed
     }
-    
+
+    // Add handler for Pause Command
+    commandCenter.pauseCommand.addTarget { [weak presenter] event in
+      guard let presenter = presenter else {
+        return .commandFailed
+      }
+
+      if presenter.getIsPlaying() {
+        presenter.handlePause()
+        return .success
+      }
+
+      return .commandFailed
+    }
+
+    commandCenter.skipBackwardCommand.preferredIntervals = [skipBackwardSeconds] as [NSNumber]
+    commandCenter.skipForwardCommand.preferredIntervals = [skipForwardSeconds] as [NSNumber]
+
+    commandCenter.skipBackwardCommand.addTarget { [weak presenter] event in
+      guard let presenter = presenter else {
+        return .commandFailed
+      }
+      presenter.handleSkipBackward()
+      return .success
+    }
+
+    commandCenter.skipForwardCommand.addTarget { [weak presenter] event in
+      guard let presenter = presenter else {
+        return .commandFailed
+      }
+      presenter.handleSkipForward()
+      return .success
+    }
+
+    commandCenter.changePlaybackPositionCommand.addTarget { [weak presenter] event in
+      guard let presenter = presenter else {
+        return .commandFailed
+      }
+      if let positionEvent = event as? MPChangePlaybackPositionCommandEvent {
+        presenter.handleSeek(toNeedle: Needle(positionEvent.positionTime))
+        return .success
+      }
+
+      return .commandFailed
+    }
+  }
+
   public func updateLockScreenElapsedTime(needle: Double) {
     MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyElapsedPlaybackTime] =
       NSNumber(value: Double(needle))
-    }
-    
+  }
+
   public func updateLockScreenPlaybackDuration(duration: Double) {
     MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyPlaybackDuration] =
       NSNumber(value: duration)
-    }
-    
+  }
+
   public func updateLockScreenPaused() {
-        MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
-    }
-    
+    MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
+  }
+
   public func updateLockScreenPlaying() {
-        MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
-    }
-    
+    MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
+  }
+
   public func updateLockScreenChangePlaybackRate(speed: Float) {
-        if speed > 0.0{
-            MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] = speed
-        }
+    if speed > 0.0 {
+      MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] = speed
     }
-    
+  }
+
   public func updateLockScreenSkipIntervals() {
-        let commandCenter = MPRemoteCommandCenter.shared()
-        commandCenter.skipBackwardCommand.isEnabled = skipBackwardSeconds > 0
-        commandCenter.skipBackwardCommand.preferredIntervals = [skipBackwardSeconds] as [NSNumber]
-        commandCenter.skipForwardCommand.isEnabled = skipForwardSeconds > 0
-        commandCenter.skipForwardCommand.preferredIntervals = [skipForwardSeconds] as [NSNumber]
-    }
+    let commandCenter = MPRemoteCommandCenter.shared()
+    commandCenter.skipBackwardCommand.isEnabled = skipBackwardSeconds > 0
+    commandCenter.skipBackwardCommand.preferredIntervals = [skipBackwardSeconds] as [NSNumber]
+    commandCenter.skipForwardCommand.isEnabled = skipForwardSeconds > 0
+    commandCenter.skipForwardCommand.preferredIntervals = [skipForwardSeconds] as [NSNumber]
+  }
 }

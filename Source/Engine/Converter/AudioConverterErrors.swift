@@ -40,90 +40,90 @@ let ReaderMissingParserError: OSStatus = 932_332_584
 let ReaderShouldNotHappenError: OSStatus = 932_332_585
 
 public enum ConverterError: LocalizedError {
-    case cannotLockQueue
-    case converterFailed(OSStatus)
-    case cannotCreatePCMBufferWithoutConverter
-    case failedToCreateDestinationFormat
-    case failedToCreatePCMBuffer
-    case notEnoughData
-    case parserMissingDataFormat
-    case reachedEndOfFile
-    case unableToCreateConverter(OSStatus)
-    case superConcerningShouldNeverHappen
-    case throttleParsingBuffersForEngine
-    case failedToCreateParser
-    
-    public var errorDescription: String? {
-        switch self {
-        case .cannotLockQueue:
-            Log.warn("Failed to lock queue")
-            return "Failed to lock queue"
-        case .converterFailed(let status):
-            Log.warn(localizedDescriptionFromConverterError(status))
-            return localizedDescriptionFromConverterError(status)
-        case .failedToCreateDestinationFormat:
-            Log.warn("Failed to create a destination (processing) format")
-            return "Failed to create a destination (processing) format"
-        case .failedToCreatePCMBuffer:
-            Log.warn("Failed to create PCM buffer for reading data")
-            return "Failed to create PCM buffer for reading data"
-        case .notEnoughData:
-            Log.warn("Not enough data for read-conversion operation")
-            return "Not enough data for read-conversion operation"
-        case .parserMissingDataFormat:
-            Log.warn("Parser is missing a valid data format")
-            return "Parser is missing a valid data format"
-        case .reachedEndOfFile:
-            Log.warn("Reached the end of the file")
-            return "Reached the end of the file"
-        case .unableToCreateConverter(let status):
-            return localizedDescriptionFromConverterError(status)
-        case .superConcerningShouldNeverHappen:
-            Log.warn("Weird unexpected reader error. Should not have happened")
-            return "Weird unexpected reader error. Should not have happened"
-        case .cannotCreatePCMBufferWithoutConverter:
-            Log.debug("Could not create a PCM Buffer because reader does not have a converter yet")
-            return "Could not create a PCM Buffer because reader does not have a converter yet"
-        case .throttleParsingBuffersForEngine:
+  case cannotLockQueue
+  case converterFailed(OSStatus)
+  case cannotCreatePCMBufferWithoutConverter
+  case failedToCreateDestinationFormat
+  case failedToCreatePCMBuffer
+  case notEnoughData
+  case parserMissingDataFormat
+  case reachedEndOfFile
+  case unableToCreateConverter(OSStatus)
+  case superConcerningShouldNeverHappen
+  case throttleParsingBuffersForEngine
+  case failedToCreateParser
+
+  public var errorDescription: String? {
+    switch self {
+    case .cannotLockQueue:
+      Log.warn("Failed to lock queue")
+      return "Failed to lock queue"
+    case .converterFailed(let status):
+      Log.warn(localizedDescriptionFromConverterError(status))
+      return localizedDescriptionFromConverterError(status)
+    case .failedToCreateDestinationFormat:
+      Log.warn("Failed to create a destination (processing) format")
+      return "Failed to create a destination (processing) format"
+    case .failedToCreatePCMBuffer:
+      Log.warn("Failed to create PCM buffer for reading data")
+      return "Failed to create PCM buffer for reading data"
+    case .notEnoughData:
+      Log.warn("Not enough data for read-conversion operation")
+      return "Not enough data for read-conversion operation"
+    case .parserMissingDataFormat:
+      Log.warn("Parser is missing a valid data format")
+      return "Parser is missing a valid data format"
+    case .reachedEndOfFile:
+      Log.warn("Reached the end of the file")
+      return "Reached the end of the file"
+    case .unableToCreateConverter(let status):
+      return localizedDescriptionFromConverterError(status)
+    case .superConcerningShouldNeverHappen:
+      Log.warn("Weird unexpected reader error. Should not have happened")
+      return "Weird unexpected reader error. Should not have happened"
+    case .cannotCreatePCMBufferWithoutConverter:
+      Log.debug("Could not create a PCM Buffer because reader does not have a converter yet")
+      return "Could not create a PCM Buffer because reader does not have a converter yet"
+    case .throttleParsingBuffersForEngine:
       Log.warn(
         "Preventing the reader from creating more PCM buffers since the player has more than 60 seconds of audio already to play"
       )
       return
         "Preventing the reader from creating more PCM buffers since the player has more than 60 seconds of audio already to play"
-        case .failedToCreateParser:
-            Log.warn("Could not create a parser")
-            return "Could not create a parser"
-        }
+    case .failedToCreateParser:
+      Log.warn("Could not create a parser")
+      return "Could not create a parser"
     }
-    
-    func localizedDescriptionFromConverterError(_ status: OSStatus) -> String {
-        switch status {
-        case kAudioConverterErr_FormatNotSupported:
-            return "Format not supported"
-        case kAudioConverterErr_OperationNotSupported:
-            return "Operation not supported"
-        case kAudioConverterErr_PropertyNotSupported:
-            return "Property not supported"
-        case kAudioConverterErr_InvalidInputSize:
-            return "Invalid input size"
-        case kAudioConverterErr_InvalidOutputSize:
-            return "Invalid output size"
-        case kAudioConverterErr_BadPropertySizeError:
-            return "Bad property size error"
-        case kAudioConverterErr_RequiresPacketDescriptionsError:
-            return "Requires packet descriptions"
-        case kAudioConverterErr_InputSampleRateOutOfRange:
-            return "Input sample rate out of range"
-        case kAudioConverterErr_OutputSampleRateOutOfRange:
-            return "Output sample rate out of range"
+  }
+
+  func localizedDescriptionFromConverterError(_ status: OSStatus) -> String {
+    switch status {
+    case kAudioConverterErr_FormatNotSupported:
+      return "Format not supported"
+    case kAudioConverterErr_OperationNotSupported:
+      return "Operation not supported"
+    case kAudioConverterErr_PropertyNotSupported:
+      return "Property not supported"
+    case kAudioConverterErr_InvalidInputSize:
+      return "Invalid input size"
+    case kAudioConverterErr_InvalidOutputSize:
+      return "Invalid output size"
+    case kAudioConverterErr_BadPropertySizeError:
+      return "Bad property size error"
+    case kAudioConverterErr_RequiresPacketDescriptionsError:
+      return "Requires packet descriptions"
+    case kAudioConverterErr_InputSampleRateOutOfRange:
+      return "Input sample rate out of range"
+    case kAudioConverterErr_OutputSampleRateOutOfRange:
+      return "Output sample rate out of range"
     #if !os(macOS)
-        case kAudioConverterErr_HardwareInUse:
-            return "Hardware is in use"
-        case kAudioConverterErr_NoHardwarePermission:
-            return "No hardware permission"
+      case kAudioConverterErr_HardwareInUse:
+        return "Hardware is in use"
+      case kAudioConverterErr_NoHardwarePermission:
+        return "No hardware permission"
     #endif
-        default:
-            return "Unspecified error"
-        }
+    default:
+      return "Unspecified error"
     }
+  }
 }

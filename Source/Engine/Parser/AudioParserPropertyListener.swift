@@ -37,49 +37,49 @@ func ParserPropertyListener(
   _ propertyId: AudioFileStreamPropertyID,
   _ flags: UnsafeMutablePointer<AudioFileStreamPropertyFlags>
 ) {
-    let selfAudioParser = Unmanaged<AudioParser>.fromOpaque(context).takeUnretainedValue()
-    
-    Log.info("audio file stream property: \(propertyId.description)")
-    switch propertyId {
-    case kAudioFileStreamProperty_DataFormat:
-        var fileAudioFormat = AudioStreamBasicDescription()
-        GetPropertyValue(&fileAudioFormat, streamId, propertyId)
-        selfAudioParser.fileAudioFormat = AVAudioFormat(streamDescription: &fileAudioFormat)
-        break
-    case kAudioFileStreamProperty_AudioDataPacketCount:
-        GetPropertyValue(&selfAudioParser.parsedAudioHeaderPacketCount, streamId, propertyId)
-        break
-    case kAudioFileStreamProperty_AudioDataByteCount:
-        GetPropertyValue(&selfAudioParser.parsedAudioPacketDataSize, streamId, propertyId)
+  let selfAudioParser = Unmanaged<AudioParser>.fromOpaque(context).takeUnretainedValue()
+
+  Log.info("audio file stream property: \(propertyId.description)")
+  switch propertyId {
+  case kAudioFileStreamProperty_DataFormat:
+    var fileAudioFormat = AudioStreamBasicDescription()
+    GetPropertyValue(&fileAudioFormat, streamId, propertyId)
+    selfAudioParser.fileAudioFormat = AVAudioFormat(streamDescription: &fileAudioFormat)
+    break
+  case kAudioFileStreamProperty_AudioDataPacketCount:
+    GetPropertyValue(&selfAudioParser.parsedAudioHeaderPacketCount, streamId, propertyId)
+    break
+  case kAudioFileStreamProperty_AudioDataByteCount:
+    GetPropertyValue(&selfAudioParser.parsedAudioPacketDataSize, streamId, propertyId)
     selfAudioParser.expectedFileSizeInBytes =
       selfAudioParser.parsedAudioDataOffset + selfAudioParser.parsedAudioPacketDataSize
     break
-    case kAudioFileStreamProperty_DataOffset:
-        GetPropertyValue(&selfAudioParser.parsedAudioDataOffset, streamId, propertyId)
-        
+  case kAudioFileStreamProperty_DataOffset:
+    GetPropertyValue(&selfAudioParser.parsedAudioDataOffset, streamId, propertyId)
+
     if selfAudioParser.parsedAudioPacketDataSize != 0 {
       selfAudioParser.expectedFileSizeInBytes =
         selfAudioParser.parsedAudioDataOffset + selfAudioParser.parsedAudioPacketDataSize
-        }
-        
-        break
-    default:
-        break
     }
+
+    break
+  default:
+    break
+  }
 }
 
 //property is like the medatada of
 func GetPropertyValue<T>(
   _ value: inout T, _ streamId: AudioFileStreamID, _ propertyId: AudioFileStreamPropertyID
 ) {
-    var propertySize: UInt32 = 0
-    guard AudioFileStreamGetPropertyInfo(streamId, propertyId, &propertySize, nil) == noErr else {//try to get the size of the property
-        Log.monitor("failed to get info for property:\(propertyId.description)")
-        return
-    }
-    
-    guard AudioFileStreamGetProperty(streamId, propertyId, &propertySize, &value) == noErr else {
-        Log.monitor("failed to get propery value for: \(propertyId.description)")
-        return
-    }
+  var propertySize: UInt32 = 0
+  guard AudioFileStreamGetPropertyInfo(streamId, propertyId, &propertySize, nil) == noErr else {  //try to get the size of the property
+    Log.monitor("failed to get info for property:\(propertyId.description)")
+    return
+  }
+
+  guard AudioFileStreamGetProperty(streamId, propertyId, &propertySize, &value) == noErr else {
+    Log.monitor("failed to get propery value for: \(propertyId.description)")
+    return
+  }
 }

@@ -27,7 +27,7 @@ import Foundation
 
 //Just a helper because it got too messy
 struct StreamProgressDTO {
-    let progress: Double
-    let data: Data
-    let totalBytesExpected: Int64?
+  let progress: Double
+  let data: Data
+  let totalBytesExpected: Int64?
 }

@@ -10,8 +10,8 @@ import Foundation
 import SwiftAudioPlayer
 
 struct AudioInfo: Hashable {
-    var index: Int = 0
-    
+  var index: Int = 0
+
   var urls: [URL] = [
     URL(
       string:
@@ -23,73 +23,73 @@ struct AudioInfo: Hashable {
     )!,
     URL(string: "https://ice6.somafm.com/groovesalad-256-mp3")!,
   ]
-    
-    var url: URL {
-        switch index {
-        case 0:
-            return urls[0]
-        case 1:
-            return urls[1]
-        case 2:
-            return urls[2]
-        default:
-            return urls[0]
-        }
+
+  var url: URL {
+    switch index {
+    case 0:
+      return urls[0]
+    case 1:
+      return urls[1]
+    case 2:
+      return urls[2]
+    default:
+      return urls[0]
     }
-    
-    var title: String {
-        switch index {
-        case 0:
-            return "Soundbite"
-        case 1:
-            return "Podcast"
-        case 2:
-            return "Radio"
-        default:
-            return "Soundbite"
-        }
+  }
+
+  var title: String {
+    switch index {
+    case 0:
+      return "Soundbite"
+    case 1:
+      return "Podcast"
+    case 2:
+      return "Radio"
+    default:
+      return "Soundbite"
     }
-    
-    let artist: String = "SwiftAudioPlayer Sample App"
+  }
+
+  let artist: String = "SwiftAudioPlayer Sample App"
   let releaseDate: Int = 1_550_790_640
-    
-    var lockscreenInfo: SALockScreenInfo {
+
+  var lockscreenInfo: SALockScreenInfo {
     return SALockScreenInfo(
       title: self.title, artist: self.artist, albumTitle: nil, artwork: nil,
       releaseDate: self.releaseDate)
-    }
-    
-    var savedUrl: URL? {
-            return savedUrls[index]
-    }
-    
-    var savedUrls: [URL?] = [nil, nil, nil]
-    
-    mutating func addSavedUrl(_ url: URL) {
-        savedUrls[index] = url
-    }
-    
-    mutating func deleteSavedUrl() {
-        savedUrls[index] = nil
-    }
-    
-    mutating func addSavedUrl(_ url: URL, atIndex i: Int) {
-        savedUrls[i] = url
-    }
-    
-    mutating func deleteSavedUrl(atIndex i: Int) {
-        savedUrls[i] = nil
-    }
-    
-    func getUrl(atIndex i: Int) -> URL {
-        return urls[i]
-    }
-    
-    mutating func setIndex(_ i: Int) {
-        index = i
-    }
-    
-    func getIndex(forURL url: URL) -> Int? {
-        return urls.firstIndex(of: url) ?? savedUrls.firstIndex(of: url)
-    }
+  }
+
+  var savedUrl: URL? {
+    return savedUrls[index]
+  }
+
+  var savedUrls: [URL?] = [nil, nil, nil]
+
+  mutating func addSavedUrl(_ url: URL) {
+    savedUrls[index] = url
+  }
+
+  mutating func deleteSavedUrl() {
+    savedUrls[index] = nil
+  }
+
+  mutating func addSavedUrl(_ url: URL, atIndex i: Int) {
+    savedUrls[i] = url
+  }
+
+  mutating func deleteSavedUrl(atIndex i: Int) {
+    savedUrls[i] = nil
+  }
+
+  func getUrl(atIndex i: Int) -> URL {
+    return urls[i]
+  }
+
+  mutating func setIndex(_ i: Int) {
+    index = i
+  }
+
+  func getIndex(forURL url: URL) -> Int? {
+    return urls.firstIndex(of: url) ?? savedUrls.firstIndex(of: url)
+  }
 }
