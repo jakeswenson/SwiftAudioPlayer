@@ -29,32 +29,30 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import AVFoundation
+import Foundation
 
-/**
- Start of the streaming chain. Get PCM buffer from lower chain and feed it to
- engine
- 
- Main responsibilities:
- POLL FOR BUFFER. When we start a stream it takes time for the lower chain to
- receive audio format. We don't know how long this would take. Therefore we poll
- continually. We also poll continually when user seeks because they could have
- seeked beyond pcm buffer, and down-chain buffer. We keep polling until we fill
- N buffers. If we stick to one buffer the audio sounds choppy because sometimes
- the parser takes longer than usual to parse a buffer
- 
- RECURSE FOR BUFFER. When we receive N buffers we switch to recursive mode. This
- means we only ask for the next buffer when one of the loaded buffers are
- used up. This is to prevent high CPU usage (100%) because otherwise we keep
- polling and parser keeps parsing even though the user is nowhere near that
- part of audio
- 
- UPDATES FOR UI. Duration, needle ticking, playing status, etc.
- 
- HANDLE PLAYING. Ensure the engine is in the correct state when playing,
- pausing, or seeking
- */
+/// Start of the streaming chain. Get PCM buffer from lower chain and feed it to
+/// engine
+///
+/// Main responsibilities:
+/// POLL FOR BUFFER. When we start a stream it takes time for the lower chain to
+/// receive audio format. We don't know how long this would take. Therefore we poll
+/// continually. We also poll continually when user seeks because they could have
+/// seeked beyond pcm buffer, and down-chain buffer. We keep polling until we fill
+/// N buffers. If we stick to one buffer the audio sounds choppy because sometimes
+/// the parser takes longer than usual to parse a buffer
+///
+/// RECURSE FOR BUFFER. When we receive N buffers we switch to recursive mode. This
+/// means we only ask for the next buffer when one of the loaded buffers are
+/// used up. This is to prevent high CPU usage (100%) because otherwise we keep
+/// polling and parser keeps parsing even though the user is nowhere near that
+/// part of audio
+///
+/// UPDATES FOR UI. Duration, needle ticking, playing status, etc.
+///
+/// HANDLE PLAYING. Ensure the engine is in the correct state when playing,
+/// pausing, or seeking
 class AudioStreamEngine: AudioEngine {
     //Constants
     private let MAX_POLL_BUFFER_COUNT = 300 //Having one buffer in engine at a time is choppy.
@@ -142,7 +140,8 @@ class AudioStreamEngine: AudioEngine {
     
     init(withRemoteUrl url: AudioURL, delegate:AudioEngineDelegate?, bitrate: SAPlayerBitrate) {
         Log.info(url)
-        super.init(url: url, delegate: delegate, engineAudioFormat: AudioEngine.defaultEngineAudioFormat)
+    super.init(
+      url: url, delegate: delegate, engineAudioFormat: AudioEngine.defaultEngineAudioFormat)
         
         switch bitrate {
         case .high:
@@ -152,7 +151,9 @@ class AudioStreamEngine: AudioEngine {
         }
         
         do {
-            converter = try AudioConverter(withRemoteUrl: url, toEngineAudioFormat: AudioEngine.defaultEngineAudioFormat, withPCMBufferSize: PCM_BUFFER_SIZE)
+      converter = try AudioConverter(
+        withRemoteUrl: url, toEngineAudioFormat: AudioEngine.defaultEngineAudioFormat,
+        withPCMBufferSize: PCM_BUFFER_SIZE)
         } catch {
             delegate?.didError()
         }
@@ -166,7 +167,6 @@ class AudioStreamEngine: AudioEngine {
             // polling for buffers when we receive data. This won't be throttled on fresh new audio or seeked audio but in all other cases it most likely will be throttled
             self.pollForNextBuffer() //  no buffer updates because thread issues if I try to update buffer status in streaming listener
         }
-        
         
         let timeInterval = 1 / (converter.engineAudioFormat.sampleRate / Double(PCM_BUFFER_SIZE))
         
@@ -212,7 +212,9 @@ class AudioStreamEngine: AudioEngine {
             queue.async { [weak self] in
                 if #available(iOS 11.0, tvOS 11.0, *) {
                     // to make sure the pcm buffers are properly free'd from memory we need to nil them after the player has used them
-                    self?.playerNode.scheduleBuffer(nextScheduledBuffer, completionCallbackType: .dataConsumed, completionHandler: { (_) in
+          self?.playerNode.scheduleBuffer(
+            nextScheduledBuffer, completionCallbackType: .dataConsumed,
+            completionHandler: { (_) in
                         nextScheduledBuffer = nil
                         self?.numberOfBuffersScheduledInTotal -= 1
                         self?.pollForNextBufferRecursive()
@@ -240,16 +242,23 @@ class AudioStreamEngine: AudioEngine {
     
     private func updateNetworkBufferRange() { //for ui
         let range = converter.pollNetworkAudioAvailabilityRange()
-        isPlayable = (numberOfBuffersScheduledInTotal >= MIN_BUFFERS_TO_BE_PLAYABLE && range.1 > 0) && predictedStreamDuration > 0
-        Log.debug("loaded \(range), numberOfBuffersScheduledInTotal: \(numberOfBuffersScheduledInTotal), isPlayable: \(isPlayable)")
-        bufferedSeconds = SAAudioAvailabilityRange(startingNeedle: range.0, durationLoadedByNetwork: range.1, predictedDurationToLoad: predictedStreamDuration, isPlayable: isPlayable)
+    isPlayable =
+      (numberOfBuffersScheduledInTotal >= MIN_BUFFERS_TO_BE_PLAYABLE && range.1 > 0)
+      && predictedStreamDuration > 0
+    Log.debug(
+      "loaded \(range), numberOfBuffersScheduledInTotal: \(numberOfBuffersScheduledInTotal), isPlayable: \(isPlayable)"
+    )
+    bufferedSeconds = SAAudioAvailabilityRange(
+      startingNeedle: range.0, durationLoadedByNetwork: range.1,
+      predictedDurationToLoad: predictedStreamDuration, isPlayable: isPlayable)
     }
     
     private func updateNeedle() {
         guard engine.isRunning else { return }
         
         guard let nodeTime = playerNode.lastRenderTime,
-            let playerTime = playerNode.playerTime(forNodeTime: nodeTime) else {
+      let playerTime = playerNode.playerTime(forNodeTime: nodeTime)
+    else {
                 return
         }
         
@@ -268,7 +277,6 @@ class AudioStreamEngine: AudioEngine {
             self.predictedStreamDuration = d
         }
     }
-    
     
     //MARK:- Overriden From Parent
     override func seek(toNeedle needle: Needle) {

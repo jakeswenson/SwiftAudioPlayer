@@ -25,29 +25,31 @@
 
 import Foundation
 
-/**
- init task
- +
- |
- |
- +-----v-----+     suspend()   +---------+          +-----------+
- | suspended <-----------------> running +----------> completed |
- +-----+-----+     resume()    +----+----+          +-----------+
- |                            |
- |                            | cancel()
- |                            |
- |          cancel()   +------v------+
- +---------------------> cancelling  |
- +-------------+
- */
+/// init task
+/// +
+/// |
+/// |
+/// +-----v-----+     suspend()   +---------+          +-----------+
+/// | suspended <-----------------> running +----------> completed |
+/// +-----+-----+     resume()    +----+----+          +-----------+
+/// |                            |
+/// |                            | cancel()
+/// |                            |
+/// |          cancel()   +------v------+
+/// +---------------------> cancelling  |
+/// +-------------+
 
 protocol AudioDataStreamable {
     //if user taps download then starts to stream
-    init(progressCallback: @escaping (_ id: ID, _ dto: StreamProgressDTO) -> (), doneCallback: @escaping (_ id: ID, _ error: Error?)->Bool) //Bool is should save or not
+  init(
+    progressCallback: @escaping (_ id: ID, _ dto: StreamProgressDTO) -> Void,
+    doneCallback: @escaping (_ id: ID, _ error: Error?) -> Bool)  //Bool is should save or not
     
     var HTTPHeaderFields: [String: String]? { get set }
     
-    func start(withID id: ID, withRemoteURL url: URL, withInitialData data: Data?, andTotalBytesExpectedPreviously previousTotalBytesExpected: Int64?)
+  func start(
+    withID id: ID, withRemoteURL url: URL, withInitialData data: Data?,
+    andTotalBytesExpectedPreviously previousTotalBytesExpected: Int64?)
     func pause(withId id: ID)
     func resume(withId id: ID)
     func stop(withId id: ID)//FIXME: with persistent play we should return a Data so that download can resume
@@ -62,7 +64,7 @@ protocol AudioDataStreamable {
 class AudioStreamWorker:NSObject, AudioDataStreamable {
     private let TIMEOUT = 60.0
     
-    fileprivate let progressCallback: (_ id: ID, _ dto: StreamProgressDTO) -> ()
+  fileprivate let progressCallback: (_ id: ID, _ dto: StreamProgressDTO) -> Void
     //Will ony be called when the task object will no longer be active
     //Why? So upper layer knows that current streaming activity for this ID is done
     //Why? To know if we should persist the stream data assuming successful completion
@@ -81,13 +83,15 @@ class AudioStreamWorker:NSObject, AudioDataStreamable {
     fileprivate var totalBytesReceived: Int64 = 0
     private var corruptedBecauseOfSeek = false
     
-    
     /// Init
     ///
     /// - Parameters:
     ///   - progressCallback: generic callback
     ///   - doneCallback: when finished
-    required init(progressCallback: @escaping (_ id: ID, _ dto: StreamProgressDTO) -> (), doneCallback: @escaping (_ id: ID, _ error: Error?) -> Bool) {
+  required init(
+    progressCallback: @escaping (_ id: ID, _ dto: StreamProgressDTO) -> Void,
+    doneCallback: @escaping (_ id: ID, _ error: Error?) -> Bool
+  ) {
         self.progressCallback = progressCallback
         self.doneCallback = doneCallback
         super.init()
@@ -100,7 +104,10 @@ class AudioStreamWorker:NSObject, AudioDataStreamable {
         self.session = URLSession(configuration: config, delegate: self, delegateQueue: nil) //TODO: should we use ephemeral
     }
     
-    func start(withID id: ID, withRemoteURL url: URL, withInitialData data: Data? = nil, andTotalBytesExpectedPreviously previousTotalBytesExpected: Int64? = nil) {
+  func start(
+    withID id: ID, withRemoteURL url: URL, withInitialData data: Data? = nil,
+    andTotalBytesExpectedPreviously previousTotalBytesExpected: Int64? = nil
+  ) {
         Log.info("selfID: \(self.id ?? "none"), paramID: \(id) initialData: \(data?.count ?? 0)")
         
         killPreviousTaskIfNeeded()
@@ -109,7 +116,8 @@ class AudioStreamWorker:NSObject, AudioDataStreamable {
         self.previousTotalBytesExpectedFromInitalData = previousTotalBytesExpected
         
         if let data = data {
-            var request = URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: TIMEOUT)
+      var request = URLRequest(
+        url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: TIMEOUT)
             HTTPHeaderFields?.forEach { request.setValue($1, forHTTPHeaderField: $0) }
             request.addValue("bytes=\(data.count)-", forHTTPHeaderField: "Range")
             task = session.dataTask(with: request)
@@ -119,9 +127,12 @@ class AudioStreamWorker:NSObject, AudioDataStreamable {
             totalBytesReceived = initialDataBytesCount
             totalBytesExpectedForWholeFile = previousTotalBytesExpected
             
-            let progress = previousTotalBytesExpected != nil ? Double(initialDataBytesCount)/Double(previousTotalBytesExpected!) : 0
+      let progress =
+        previousTotalBytesExpected != nil
+        ? Double(initialDataBytesCount) / Double(previousTotalBytesExpected!) : 0
             
-            let dto = StreamProgressDTO(progress: progress, data: data, totalBytesExpected: totalBytesExpectedForWholeFile)
+      let dto = StreamProgressDTO(
+        progress: progress, data: data, totalBytesExpected: totalBytesExpectedForWholeFile)
             
             progressCallback(id, dto)
             
@@ -197,7 +208,6 @@ class AudioStreamWorker:NSObject, AudioDataStreamable {
             return
         }
         
-        
         if task.state == .running || task.state == .suspended {
             task.cancel()
             self.task = nil
@@ -221,15 +231,18 @@ class AudioStreamWorker:NSObject, AudioDataStreamable {
         stop(withId: id)
         totalBytesReceived = 0
         corruptedBecauseOfSeek = true
-        self.progressCallback(id, StreamProgressDTO(progress: 0, data: Data(), totalBytesExpected: totalBytesExpectedForWholeFile))
+    self.progressCallback(
+      id,
+      StreamProgressDTO(
+        progress: 0, data: Data(), totalBytesExpected: totalBytesExpectedForWholeFile))
         
-        var request = URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: TIMEOUT)
+    var request = URLRequest(
+      url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: TIMEOUT)
         HTTPHeaderFields?.forEach { request.setValue($1, forHTTPHeaderField: $0) }
         request.addValue("bytes=\(offset)-", forHTTPHeaderField: "Range")
         task = session.dataTask(with: request)
         task?.resume()
     }
-    
     
     func getRunningID() -> ID? {
         if let task = task, task.state == .running, let id = id {
@@ -239,11 +252,12 @@ class AudioStreamWorker:NSObject, AudioDataStreamable {
     }
 }
 
-
 //MARK:- URLSessionDataDelegate
 extension AudioStreamWorker: URLSessionDataDelegate {
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        Log.debug("selfID: ", id, " dataTaskID: ", dataTask.taskDescription, " dataSize: ", data.count, " expected: ", totalBytesExpectedForWholeFile, " received: ", totalBytesReceived)
+    Log.debug(
+      "selfID: ", id, " dataTaskID: ", dataTask.taskDescription, " dataSize: ", data.count,
+      " expected: ", totalBytesExpectedForWholeFile, " received: ", totalBytesReceived)
         guard let id = id else {
             //FIXME: should be an error when done with testing phase
             Log.monitor("stream worker in weird state 9847467")
@@ -268,10 +282,14 @@ extension AudioStreamWorker: URLSessionDataDelegate {
         let progress = Double(totalBytesReceived)/Double(totalBytesExpected)
         
         Log.debug("network streaming progress \(progress)")
-        self.progressCallback(id, StreamProgressDTO(progress: progress, data: data, totalBytesExpected: totalBytesExpected))
+    self.progressCallback(
+      id, StreamProgressDTO(progress: progress, data: data, totalBytesExpected: totalBytesExpected))
     }
     
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+  func urlSession(
+    _ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
+    completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+  ) {
         Log.debug(dataTask.taskDescription, id, response.description)
         guard id != nil else {
             Log.monitor("stream worker in weird state 2049jg3")
@@ -319,7 +337,9 @@ extension AudioStreamWorker: URLSessionDataDelegate {
                 return
             }
             
-            Log.monitor("\(task.currentRequest?.url?.absoluteString ?? "nil url") error: \(err.localizedDescription)")
+      Log.monitor(
+        "\(task.currentRequest?.url?.absoluteString ?? "nil url") error: \(err.localizedDescription)"
+      )
             
             let _ = doneCallback(id, err)
             return

@@ -47,9 +47,17 @@ extension SAPlayer {
          - Parameter completion: Completion handler that will return once the download is successful and complete.
          - Parameter savedUrl: The url of where the audio was saved locally on the device. Will receive once download has completed.
          */
-        public static func downloadAudio(withRemoteUrl url: URL, completion: @escaping (_ savedUrl: URL, _ error: Error?) -> ()) {
+    public static func downloadAudio(withRemoteUrl url: URL) async throws -> URL {
             SAPlayer.shared.addUrlToMapping(url: url)
-            AudioDataManager.shared.startDownload(withRemoteURL: url, completion: completion)
+      return try await withCheckedThrowingContinuation { cont in
+        AudioDataManager.shared.startDownload(withRemoteURL: url) { localUrl, err in
+          if let error = err {
+            cont.resume(throwing: error)
+          } else {
+            cont.resume(returning: localUrl)
+          }
+        }
+      }
         }
         
         /**
@@ -97,7 +105,7 @@ extension SAPlayer {
          
          - Parameter completionHandler: The completion hander from `AppDelegate` to use for app in the background downloads.
          */
-        public static func setBackgroundCompletionHandler(_ completionHandler: @escaping () -> ()) {
+    public static func setBackgroundCompletionHandler(_ completionHandler: @escaping () -> Void) {
             AudioDataManager.shared.setBackgroundCompletionHandler(completionHandler)
         }
         

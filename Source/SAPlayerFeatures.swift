@@ -5,8 +5,8 @@
 //  Created by Tanha Kabir on 3/10/21.
 //
 
-import Foundation
 import AVFoundation
+import Foundation
 
 extension SAPlayer {
     /**
@@ -40,19 +40,22 @@ extension SAPlayer {
                 originalRate = SAPlayer.shared.rate ?? 1.0
                 let format = engine.mainMixerNode.outputFormat(forBus: 0)
                 
-                
                 // look at documentation here to get an understanding of what is happening here: https://www.raywenderlich.com/5154-avaudioengine-tutorial-for-ios-getting-started#toc-anchor-005
-                engine.mainMixerNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, when in
+        engine.mainMixerNode.installTap(onBus: 0, bufferSize: 1024, format: format) {
+          buffer, when in
                     guard let channelData = buffer.floatChannelData else {
                         return
                     }
 
                     let channelDataValue = channelData.pointee
-                    let channelDataValueArray = stride(from: 0,
+          let channelDataValueArray = stride(
+            from: 0,
                                                        to: Int(buffer.frameLength),
-                                                       by: buffer.stride).map { channelDataValue[$0] }
+            by: buffer.stride
+          ).map { channelDataValue[$0] }
 
-                    let rms = sqrt(channelDataValueArray.map { $0 * $0 }.reduce(0, +) / Float(buffer.frameLength))
+          let rms = sqrt(
+            channelDataValueArray.map { $0 * $0 }.reduce(0, +) / Float(buffer.frameLength))
 
                     let avgPower = 20 * log10(rms)
 
@@ -119,7 +122,9 @@ extension SAPlayer {
              - Parameter afterDelay: The number of seconds to wait before pausing the audio
              */
             public static func enable(afterDelay delay: Double) {
-                timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false, block: { _ in
+        timer = Timer.scheduledTimer(
+          withTimeInterval: delay, repeats: false,
+          block: { _ in
                     SAPlayer.shared.pause()
                 })
             }

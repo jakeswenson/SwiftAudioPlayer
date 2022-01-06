@@ -25,9 +25,7 @@
 
 import Foundation
 
-/**
- Utility class to access audio files saved on the phone.
- */
+/// Utility class to access audio files saved on the phone.
 struct FileStorage {
     private init() {}
     
@@ -36,7 +34,9 @@ struct FileStorage {
      
      Note: It is not guaranteed that the file actually exists.
      */
-    static func getUrl(givenAName name: NameFile, inDirectory dir: FileManager.SearchPathDirectory) -> URL {
+  static func getUrl(givenAName name: NameFile, inDirectory dir: FileManager.SearchPathDirectory)
+    -> URL
+  {
         let directoryPath = NSSearchPathForDirectoriesInDomains(dir, .userDomainMask, true)[0] as String
         let url = URL(fileURLWithPath: directoryPath)
         return url.appendingPathComponent(name)
@@ -67,9 +67,7 @@ extension FileStorage {
         private init() {}
         
         private static var directory: FileManager.SearchPathDirectory {
-            get {
                 return AudioDataManager.shared.downloadDirectory
-            }
         }
         
         static func isStored(_ id: ID) -> Bool {
@@ -91,7 +89,8 @@ extension FileStorage {
         
         static func write(_ id: ID, fileExtension: String, data: Data) {
             do {
-                let url = FileStorage.getUrl(givenAName: getAudioFileName(id, fileExtension: fileExtension), inDirectory: directory)
+        let url = FileStorage.getUrl(
+          givenAName: getAudioFileName(id, fileExtension: fileExtension), inDirectory: directory)
                 try data.write(to: url)
             } catch {
                 Log.monitor(error.localizedDescription)
@@ -111,7 +110,9 @@ extension FileStorage {
             let folderUrls = FileManager.default.urls(for: directory, in: .userDomainMask)
             guard folderUrls.count != 0 else { return nil }
 
-            if let urls = try? FileManager.default.contentsOfDirectory(at: folderUrls[0], includingPropertiesForKeys: nil) {
+      if let urls = try? FileManager.default.contentsOfDirectory(
+        at: folderUrls[0], includingPropertiesForKeys: nil)
+      {
                 for url in urls {
                     if url.absoluteString.contains(id) && url.pathExtension != "" {
                         _ = getUrl(givenId: id, andFileExtension: url.pathExtension)
@@ -123,7 +124,8 @@ extension FileStorage {
         }
         
         static func getUrl(givenId id: ID, andFileExtension fileExtension: String) -> URL {
-            let url = FileStorage.getUrl(givenAName: getAudioFileName(id, fileExtension: fileExtension), inDirectory: directory)
+      let url = FileStorage.getUrl(
+        givenAName: getAudioFileName(id, fileExtension: fileExtension), inDirectory: directory)
             return url
         }
         

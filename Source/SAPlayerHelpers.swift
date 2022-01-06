@@ -24,24 +24,29 @@
 //  THE SOFTWARE.
 
 import Foundation
-import UIKit
 
-/**
- UTC corresponds to epoch time (number of seconds that have elapsed since January 1, 1970, midnight UTC/GMT). https://www.epochconverter.com/ is a useful site to convert to human readable format.
- */
+#if os(macOS)
+  import AppKit
+  public typealias PlatformImage = NSImage
+#else
+import UIKit
+  public typealias PlatformImage = UIImage
+#endif
+
+/// UTC corresponds to epoch time (number of seconds that have elapsed since January 1, 1970, midnight UTC/GMT). https://www.epochconverter.com/ is a useful site to convert to human readable format.
 public typealias UTC = Int
 
-/**
- Use to set what will be displayed in the lockscreen.
- */
+/// Use to set what will be displayed in the lockscreen.
 public struct SALockScreenInfo {
     var title: String
     var artist: String
     var albumTitle: String?
-    var artwork: UIImage?
+  var artwork: PlatformImage?
     var releaseDate: UTC
     
-    public init(title: String, artist: String, albumTitle: String?, artwork: UIImage?, releaseDate: UTC) {
+  public init(
+    title: String, artist: String, albumTitle: String?, artwork: PlatformImage?, releaseDate: UTC
+  ) {
         self.title = title
         self.artist = artist
         self.albumTitle = albumTitle
@@ -50,10 +55,7 @@ public struct SALockScreenInfo {
     }
 }
 
-
-/**
- Use to add audio to be queued for playback.
- */
+/// Use to add audio to be queued for playback.
 public struct SAAudioQueueItem {
     public var loc: Location
     public var url: URL
@@ -68,7 +70,9 @@ public struct SAAudioQueueItem {
      - Parameter mediaInfo: Relevant lockscreen media info for the queued audio.
      - Parameter bitrate: For streamed remote audio specifiy a bitrate if different from high. Use low bitrate for radio streams.
      */
-    public init(loc: Location, url: URL, mediaInfo: SALockScreenInfo?, bitrate: SAPlayerBitrate = .high) {
+  public init(
+    loc: Location, url: URL, mediaInfo: SALockScreenInfo?, bitrate: SAPlayerBitrate = .high
+  ) {
         self.loc = loc
         self.url = url
         self.mediaInfo = mediaInfo

@@ -29,11 +29,17 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import AVFoundation
 import AudioToolbox
+import Foundation
 
-func ConverterListener(_ converter: AudioConverterRef, _ packetCount: UnsafeMutablePointer<UInt32>, _ ioData: UnsafeMutablePointer<AudioBufferList>, _ outPacketDescriptions: UnsafeMutablePointer<UnsafeMutablePointer<AudioStreamPacketDescription>?>?, _ context: UnsafeMutableRawPointer?) -> OSStatus {
+func ConverterListener(
+  _ converter: AudioConverterRef, _ packetCount: UnsafeMutablePointer<UInt32>,
+  _ ioData: UnsafeMutablePointer<AudioBufferList>,
+  _ outPacketDescriptions: UnsafeMutablePointer<
+    UnsafeMutablePointer<AudioStreamPacketDescription>?
+  >?, _ context: UnsafeMutableRawPointer?
+) -> OSStatus {
     let selfAudioConverter = Unmanaged<AudioConverter>.fromOpaque(context!).takeUnretainedValue()
     
     guard let parser = selfAudioConverter.parser else {
@@ -48,7 +54,8 @@ func ConverterListener(_ converter: AudioConverterRef, _ packetCount: UnsafeMuta
     
     var audioPacketFromParser:(AudioStreamPacketDescription?, Data)?
     do {
-        audioPacketFromParser = try parser.pullPacket(atIndex: selfAudioConverter.currentAudioPacketIndex)
+    audioPacketFromParser = try parser.pullPacket(
+      atIndex: selfAudioConverter.currentAudioPacketIndex)
         Log.debug("received packet from parser at index: \(selfAudioConverter.currentAudioPacketIndex)")
     } catch ParserError.notEnoughDataForReader {
         return ReaderNotEnoughDataError
@@ -73,9 +80,11 @@ func ConverterListener(_ converter: AudioConverterRef, _ packetCount: UnsafeMuta
     var packet = audioPacket.1
     let packetByteCount = packet.count //this is not the count of an array
     ioData.pointee.mNumberBuffers = 1
-    ioData.pointee.mBuffers.mData = UnsafeMutableRawPointer.allocate(byteCount: packetByteCount, alignment: 0)
+  ioData.pointee.mBuffers.mData = UnsafeMutableRawPointer.allocate(
+    byteCount: packetByteCount, alignment: 0)
     _ = packet.accessMutableBytes({ (bytes: UnsafeMutablePointer<UInt8>) in
-        memcpy((ioData.pointee.mBuffers.mData?.assumingMemoryBound(to: UInt8.self))!, bytes, packetByteCount)
+    memcpy(
+      (ioData.pointee.mBuffers.mData?.assumingMemoryBound(to: UInt8.self))!, bytes, packetByteCount)
     })
     ioData.pointee.mBuffers.mDataByteSize = UInt32(packetByteCount)
     
@@ -89,7 +98,8 @@ func ConverterListener(_ converter: AudioConverterRef, _ packetCount: UnsafeMuta
     let fileFormatDescription = fileAudioFormat.streamDescription.pointee
     if fileFormatDescription.mFormatID != kAudioFormatLinearPCM {
         if outPacketDescriptions?.pointee == nil {
-            outPacketDescriptions?.pointee = UnsafeMutablePointer<AudioStreamPacketDescription>.allocate(capacity: 1)
+      outPacketDescriptions?.pointee = UnsafeMutablePointer<AudioStreamPacketDescription>.allocate(
+        capacity: 1)
         }
         outPacketDescriptions?.pointee?.pointee.mDataByteSize = UInt32(packetByteCount)
         outPacketDescriptions?.pointee?.pointee.mStartOffset = 0

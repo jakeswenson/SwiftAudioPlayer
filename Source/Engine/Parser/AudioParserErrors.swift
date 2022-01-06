@@ -29,8 +29,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import AVFoundation
+import Foundation
 
 enum ParserError: LocalizedError {
     case couldNotOpenStream
@@ -62,11 +62,13 @@ enum ParserError: LocalizedError {
         case kAudioFileStreamError_BadPropertySize:
             return "The size of the property data was not correct"
         case kAudioFileStreamError_NotOptimized:
-            return "It is not possible to produce output packets because the file's packet table or other defining"
+      return
+        "It is not possible to produce output packets because the file's packet table or other defining"
         case kAudioFileStreamError_InvalidPacketOffset:
             return "A packet offset was less than zero, or past the end of the file,"
         case kAudioFileStreamError_InvalidFile:
-            return "The file is malformed, or otherwise not a valid instance of an audio file of its type, or is not recognized as an audio file"
+      return
+        "The file is malformed, or otherwise not a valid instance of an audio file of its type, or is not recognized as an audio file"
         case kAudioFileStreamError_ValueUnknown:
             return "The property value is not present in this file before the audio data"
         case kAudioFileStreamError_DataUnavailable:
@@ -78,7 +80,6 @@ enum ParserError: LocalizedError {
         }
     }
 }
-
 
 /// This extension just helps us print out the name of an `AudioFileStreamPropertyID`. Purely for debugging and not essential to the main functionality of the parser.
 extension AudioFileStreamPropertyID {

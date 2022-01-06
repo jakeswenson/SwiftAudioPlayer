@@ -23,12 +23,13 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import AVFoundation
+import Collections
+import Foundation
 import MediaPlayer
 
 class SAPlayerPresenter {
-    weak var delegate: SAPlayerDelegate?
+  weak var delegate: SAPlayerDelegate? = nil
     var shouldPlayImmediately = false //for auto-play
     
     var needle: Needle?
@@ -42,12 +43,11 @@ class SAPlayerPresenter {
     var durationRef: UInt = 0
     var needleRef: UInt = 0
     var playingStatusRef: UInt = 0
-    var audioQueue: [SAAudioQueueItem] = []
+  var audioQueue: Deque<SAAudioQueueItem> = []
     
-    init(delegate: SAPlayerDelegate?) {
-        self.delegate = delegate
-
-        durationRef = AudioClockDirector.shared.attachToChangesInDuration(closure: { [weak self] (duration) in
+  init() {
+    durationRef = AudioClockDirector.shared.attachToChangesInDuration(closure: {
+      [weak self] (duration) in
             guard let self = self else { throw DirectorError.closureIsDead }
             
             self.delegate?.updateLockScreenPlaybackDuration(duration: duration)
@@ -63,10 +63,11 @@ class SAPlayerPresenter {
             self.delegate?.updateLockScreenElapsedTime(needle: needle)
         })
         
-        playingStatusRef = AudioClockDirector.shared.attachToChangesInPlayingStatus(closure: { [weak self] (isPlaying) in
+    playingStatusRef = AudioClockDirector.shared.attachToChangesInPlayingStatus(closure: {
+      [weak self] (isPlaying) in
             guard let self = self else { throw DirectorError.closureIsDead }
             
-            if(isPlaying == .paused && self.shouldPlayImmediately) {
+      if isPlaying == .paused && self.shouldPlayImmediately {
                 self.shouldPlayImmediately = false
                 self.handlePlay()
             }
@@ -77,7 +78,7 @@ class SAPlayerPresenter {
             guard isPlaying != self.isPlaying else { return }
             self.isPlaying = isPlaying
             
-            if(self.isPlaying == .ended) {
+      if self.isPlaying == .ended {
                 self.playNextAudioIfExists()
             }
         })
@@ -122,8 +123,11 @@ class SAPlayerPresenter {
         AudioClockDirector.shared.resetCache()
     }
     
-    func handleQueueStreamedAudio(withRemoteUrl url: URL, mediaInfo: SALockScreenInfo?, bitrate: SAPlayerBitrate) {
-        audioQueue.append(SAAudioQueueItem(loc: .remote, url: url, mediaInfo: mediaInfo, bitrate: bitrate))
+  func handleQueueStreamedAudio(
+    withRemoteUrl url: URL, mediaInfo: SALockScreenInfo?, bitrate: SAPlayerBitrate
+  ) {
+    audioQueue.append(
+      SAAudioQueueItem(loc: .remote, url: url, mediaInfo: mediaInfo, bitrate: bitrate))
     }
     
     func handleQueueSavedAudio(withSavedUrl url: URL, mediaInfo: SALockScreenInfo?) {
@@ -133,7 +137,7 @@ class SAPlayerPresenter {
     func handleRemoveFirstQueuedItem() -> URL? {
         guard audioQueue.count != 0 else { return nil }
         
-        return audioQueue.remove(at: 0).url
+    return audioQueue.removeFirst().url
     }
     
     func handleClearQueued() -> [URL] {

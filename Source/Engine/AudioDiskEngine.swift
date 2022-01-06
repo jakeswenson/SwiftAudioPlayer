@@ -23,8 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import AVFoundation
+import Foundation
 
 class AudioDiskEngine: AudioEngine {
     var audioFormat: AVAudioFormat?
@@ -37,7 +37,8 @@ class AudioDiskEngine: AudioEngine {
     
     var currentFrame: AVAudioFramePosition {
         guard let lastRenderTime = playerNode.lastRenderTime,
-            let playerTime = playerNode.playerTime(forNodeTime: lastRenderTime) else {
+      let playerTime = playerNode.playerTime(forNodeTime: lastRenderTime)
+    else {
                 return 0
         }
         
@@ -55,7 +56,9 @@ class AudioDiskEngine: AudioEngine {
             Log.monitor(error.localizedDescription)
         }
         
-        super.init(url: url, delegate: delegate, engineAudioFormat: audioFile?.processingFormat ?? AudioEngine.defaultEngineAudioFormat)
+    super.init(
+      url: url, delegate: delegate,
+      engineAudioFormat: audioFile?.processingFormat ?? AudioEngine.defaultEngineAudioFormat)
         
         if let file = audioFile {
             Log.debug("Audio file exists")
@@ -64,7 +67,9 @@ class AudioDiskEngine: AudioEngine {
             audioSampleRate = Float(audioFormat?.sampleRate ?? 44100)
             audioLengthSeconds = Float(audioLengthSamples) / audioSampleRate
             duration = Duration(audioLengthSeconds)
-            bufferedSeconds = SAAudioAvailabilityRange(startingNeedle: 0, durationLoadedByNetwork: duration, predictedDurationToLoad: duration, isPlayable: true)
+      bufferedSeconds = SAAudioAvailabilityRange(
+        startingNeedle: 0, durationLoadedByNetwork: duration, predictedDurationToLoad: duration,
+        isPlayable: true)
         } else {
             Log.monitor("Could not load downloaded file with url: \(url)")
         }
@@ -127,7 +132,10 @@ class AudioDiskEngine: AudioEngine {
         playerNode.stop()
         
         if currentPosition < audioLengthSamples {
-            playerNode.scheduleSegment(audioFile, startingFrame: seekFrame, frameCount: AVAudioFrameCount(audioLengthSamples - seekFrame), at: nil, completionHandler: nil)
+      playerNode.scheduleSegment(
+        audioFile, startingFrame: seekFrame,
+        frameCount: AVAudioFrameCount(audioLengthSamples - seekFrame), at: nil,
+        completionHandler: nil)
             
             if playing {
                 playerNode.play()

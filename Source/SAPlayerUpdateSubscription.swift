@@ -47,8 +47,13 @@ extension SAPlayer {
              - Parameter timePosition: The current time within the audio that is playing.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-            @available(*, deprecated, message: "Use subscribe without the url in the closure for current audio updates")
-            public static func subscribe(_ closure: @escaping (_ url: URL, _ timePosition:  Double) -> ()) -> UInt {
+      @available(
+        *, deprecated,
+        message: "Use subscribe without the url in the closure for current audio updates"
+      )
+      public static func subscribe(
+        _ closure: @escaping (_ url: URL, _ timePosition: Double) -> Void
+      ) -> UInt {
                 return AudioClockDirector.shared.attachToChangesInNeedle(closure: { (key, needle) in
                     guard let url = SAPlayer.shared.getUrl(forKey: key) else { return }
                     closure(url, needle)
@@ -64,7 +69,7 @@ extension SAPlayer {
              - Parameter timePosition: The current time within the audio that is playing.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-            public static func subscribe(_ closure: @escaping (_ timePosition:  Double) -> ()) -> UInt {
+      public static func subscribe(_ closure: @escaping (_ timePosition: Double) -> Void) -> UInt {
                 AudioClockDirector.shared.attachToChangesInNeedle(closure: closure)
             }
             
@@ -97,8 +102,13 @@ extension SAPlayer {
              - Parameter duration: The duration of the current initialized audio.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-            @available(*, deprecated, message: "Use subscribe without the url in the closure for current audio updates")
-            public static func subscribe(_ closure: @escaping (_ url: URL, _ duration: Double) -> ()) -> UInt {
+      @available(
+        *, deprecated,
+        message: "Use subscribe without the url in the closure for current audio updates"
+      )
+      public static func subscribe(_ closure: @escaping (_ url: URL, _ duration: Double) -> Void)
+        -> UInt
+      {
                 return AudioClockDirector.shared.attachToChangesInDuration(closure: { (key, duration) in
                     guard let url = SAPlayer.shared.getUrl(forKey: key) else { return }
                     closure(url, duration)
@@ -116,7 +126,7 @@ extension SAPlayer {
              - Parameter duration: The duration of the current initialized audio.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-            public static func subscribe(_ closure: @escaping (_ duration: Double) -> ()) -> UInt {
+      public static func subscribe(_ closure: @escaping (_ duration: Double) -> Void) -> UInt {
                 return AudioClockDirector.shared.attachToChangesInDuration(closure: closure)
             }
             
@@ -145,9 +155,15 @@ extension SAPlayer {
              - Parameter playingStatus: Whether the player is playing audio or paused.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-            @available(*, deprecated, message: "Use subscribe without the url in the closure for current audio updates")
-            public static func subscribe(_ closure: @escaping (_ url: URL, _ playingStatus: SAPlayingStatus) -> ()) -> UInt {
-                return AudioClockDirector.shared.attachToChangesInPlayingStatus(closure: { (key, isPlaying) in
+      @available(
+        *, deprecated,
+        message: "Use subscribe without the url in the closure for current audio updates"
+      )
+      public static func subscribe(
+        _ closure: @escaping (_ url: URL, _ playingStatus: SAPlayingStatus) -> Void
+      ) -> UInt {
+        return AudioClockDirector.shared.attachToChangesInPlayingStatus(closure: {
+          (key, isPlaying) in
                     guard let url = SAPlayer.shared.getUrl(forKey: key) else { return }
                     closure(url, isPlaying)
                 })
@@ -162,7 +178,9 @@ extension SAPlayer {
              - Parameter playingStatus: Whether the player is playing audio or paused.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-            public static func subscribe(_ closure: @escaping (_ playingStatus: SAPlayingStatus) -> ()) -> UInt {
+      public static func subscribe(_ closure: @escaping (_ playingStatus: SAPlayingStatus) -> Void)
+        -> UInt
+      {
                 return AudioClockDirector.shared.attachToChangesInPlayingStatus(closure: closure)
             }
             
@@ -193,8 +211,13 @@ extension SAPlayer {
              - Parameter buffer: Availabity of audio that has been downloaded to play.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-            @available(*, deprecated, message: "Use subscribe without the url in the closure for current audio updates")
-            public static func subscribe(_ closure: @escaping (_ url: URL, _ buffer: SAAudioAvailabilityRange) -> ()) -> UInt {
+      @available(
+        *, deprecated,
+        message: "Use subscribe without the url in the closure for current audio updates"
+      )
+      public static func subscribe(
+        _ closure: @escaping (_ url: URL, _ buffer: SAAudioAvailabilityRange) -> Void
+      ) -> UInt {
                 return AudioClockDirector.shared.attachToChangesInBufferedRange(closure: { (key, buffer) in
                     guard let url = SAPlayer.shared.getUrl(forKey: key) else { return }
                     closure(url, buffer)
@@ -212,7 +235,9 @@ extension SAPlayer {
              - Parameter buffer: Availabity of audio that has been downloaded to play.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-            public static func subscribe(_ closure: @escaping (_ buffer: SAAudioAvailabilityRange) -> ()) -> UInt {
+      public static func subscribe(
+        _ closure: @escaping (_ buffer: SAAudioAvailabilityRange) -> Void
+      ) -> UInt {
                 return AudioClockDirector.shared.attachToChangesInBufferedRange(closure: closure)
             }
             
@@ -241,7 +266,9 @@ extension SAPlayer {
              - Parameter progress: Value from 0.0 to 1.0 indicating progress of download.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-            public static func subscribe(_ closure: @escaping (_ url: URL, _ progress: Double) -> ()) -> UInt {
+      public static func subscribe(_ closure: @escaping (_ url: URL, _ progress: Double) -> Void)
+        -> UInt
+      {
                 return DownloadProgressDirector.shared.attach(closure: { (key, progress) in
                     guard let url = SAPlayer.shared.getUrl(forKey: key) else { return }
                     closure(url, progress)
@@ -267,7 +294,7 @@ extension SAPlayer {
              - Parameter url: The corresponding remote URL for the forthcoming audio file.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-            public static func subscribe(_ closure: @escaping (_ newUrl: URL) -> ()) -> UInt {
+      public static func subscribe(_ closure: @escaping (_ newUrl: URL) -> Void) -> UInt {
                 return AudioQueueDirector.shared.attach(closure: closure)
             }
 
@@ -281,4 +308,3 @@ extension SAPlayer {
         }
     }
 }
-

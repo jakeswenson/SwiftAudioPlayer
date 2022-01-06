@@ -23,22 +23,28 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import CoreMedia
+import Foundation
 
 class AudioClockDirector {
     static let shared = AudioClockDirector()
     private var currentAudioKey: Key?
     
-    private var depNeedleClosures: DirectorThreadSafeClosuresDeprecated<Needle> = DirectorThreadSafeClosuresDeprecated()
-    private var depDurationClosures: DirectorThreadSafeClosuresDeprecated<Duration> = DirectorThreadSafeClosuresDeprecated()
-    private var depPlayingStatusClosures: DirectorThreadSafeClosuresDeprecated<SAPlayingStatus> = DirectorThreadSafeClosuresDeprecated()
-    private var depBufferClosures: DirectorThreadSafeClosuresDeprecated<SAAudioAvailabilityRange> = DirectorThreadSafeClosuresDeprecated()
+  private var depNeedleClosures: DirectorThreadSafeClosuresDeprecated<Needle> =
+    DirectorThreadSafeClosuresDeprecated()
+  private var depDurationClosures: DirectorThreadSafeClosuresDeprecated<Duration> =
+    DirectorThreadSafeClosuresDeprecated()
+  private var depPlayingStatusClosures: DirectorThreadSafeClosuresDeprecated<SAPlayingStatus> =
+    DirectorThreadSafeClosuresDeprecated()
+  private var depBufferClosures: DirectorThreadSafeClosuresDeprecated<SAAudioAvailabilityRange> =
+    DirectorThreadSafeClosuresDeprecated()
     
     private var needleClosures: DirectorThreadSafeClosures<Needle> = DirectorThreadSafeClosures()
     private var durationClosures: DirectorThreadSafeClosures<Duration> = DirectorThreadSafeClosures()
-    private var playingStatusClosures: DirectorThreadSafeClosures<SAPlayingStatus> = DirectorThreadSafeClosures()
-    private var bufferClosures: DirectorThreadSafeClosures<SAAudioAvailabilityRange> = DirectorThreadSafeClosures()
+  private var playingStatusClosures: DirectorThreadSafeClosures<SAPlayingStatus> =
+    DirectorThreadSafeClosures()
+  private var bufferClosures: DirectorThreadSafeClosures<SAAudioAvailabilityRange> =
+    DirectorThreadSafeClosures()
     
     private init() {}
     
@@ -68,7 +74,9 @@ class AudioClockDirector {
     // MARK: - Attaches
     
     // Needle
-    @available(*, deprecated, message: "Use subscribe without key in the closure for current audio updates")
+  @available(
+    *, deprecated, message: "Use subscribe without key in the closure for current audio updates"
+  )
     func attachToChangesInNeedle(closure: @escaping (Key, Needle) throws -> Void) -> UInt {
         return depNeedleClosures.attach(closure: closure)
     }
@@ -77,9 +85,10 @@ class AudioClockDirector {
         return needleClosures.attach(closure: closure)
     }
     
-    
     // Duration
-    @available(*, deprecated, message: "Use subscribe without key in the closure for current audio updates")
+  @available(
+    *, deprecated, message: "Use subscribe without key in the closure for current audio updates"
+  )
     func attachToChangesInDuration(closure: @escaping (Key, Duration) throws -> Void) -> UInt {
         return depDurationClosures.attach(closure: closure)
     }
@@ -88,10 +97,13 @@ class AudioClockDirector {
         return durationClosures.attach(closure: closure)
     }
     
-    
     // Playing status
-    @available(*, deprecated, message: "Use subscribe without key in the closure for current audio updates")
-    func attachToChangesInPlayingStatus(closure: @escaping (Key, SAPlayingStatus) throws -> Void) -> UInt{
+  @available(
+    *, deprecated, message: "Use subscribe without key in the closure for current audio updates"
+  )
+  func attachToChangesInPlayingStatus(closure: @escaping (Key, SAPlayingStatus) throws -> Void)
+    -> UInt
+  {
         return depPlayingStatusClosures.attach(closure: closure)
     }
     
@@ -99,17 +111,21 @@ class AudioClockDirector {
         return playingStatusClosures.attach(closure: closure)
     }
     
-    
     // Buffer
-    @available(*, deprecated, message: "Use subscribe without key in the closure for current audio updates")
-    func attachToChangesInBufferedRange(closure: @escaping (Key, SAAudioAvailabilityRange) throws -> Void) -> UInt{
+  @available(
+    *, deprecated, message: "Use subscribe without key in the closure for current audio updates"
+  )
+  func attachToChangesInBufferedRange(
+    closure: @escaping (Key, SAAudioAvailabilityRange) throws -> Void
+  ) -> UInt {
         return depBufferClosures.attach(closure: closure)
     }
     
-    func attachToChangesInBufferedRange(closure: @escaping (SAAudioAvailabilityRange) throws -> Void) -> UInt{
+  func attachToChangesInBufferedRange(closure: @escaping (SAAudioAvailabilityRange) throws -> Void)
+    -> UInt
+  {
         return bufferClosures.attach(closure: closure)
     }
-    
     
     // MARK: - Detaches
     func detachFromChangesInNeedle(withID id: UInt) {

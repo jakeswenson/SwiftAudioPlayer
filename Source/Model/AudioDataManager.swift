@@ -33,23 +33,23 @@ protocol AudioDataManagable {
     var downloadDirectory: FileManager.SearchPathDirectory { get }
     
     func setHTTPHeaderFields(_ fields: [String: String]?)
-    func setBackgroundCompletionHandler(_ completionHandler: @escaping () -> ())
+  func setBackgroundCompletionHandler(_ completionHandler: @escaping () -> Void)
     func setAllowCellularDownloadPreference(_ preference: Bool)
     func setDownloadDirectory(_ dir: FileManager.SearchPathDirectory)
     
     func clear()
     
     //Director pattern
-    func attach(callback: @escaping (_ id: ID, _ progress: Double)->())
+  func attach(callback: @escaping (_ id: ID, _ progress: Double) -> Void)
     
-    func startStream(withRemoteURL url: AudioURL, callback: @escaping (StreamProgressPTO) -> ()) //called by throttler
+  func startStream(withRemoteURL url: AudioURL, callback: @escaping (StreamProgressPTO) -> Void)  //called by throttler
     func pauseStream(withRemoteURL url: AudioURL)
     func resumeStream(withRemoteURL url: AudioURL)
     func seekStream(withRemoteURL url: AudioURL, toByteOffset offset: UInt64)
     func deleteStream(withRemoteURL url: AudioURL) 
     
     func getPersistedUrl(withRemoteURL url: AudioURL) -> URL?
-    func startDownload(withRemoteURL url: AudioURL, completion: @escaping (URL, Error?) -> ())
+  func startDownload(withRemoteURL url: AudioURL, completion: @escaping (URL, Error?) -> Void)
     func cancelDownload(withRemoteURL url: AudioURL)
     func deleteDownload(withLocalURL url: URL)
 }
@@ -105,7 +105,7 @@ class AudioDataManager: AudioDataManagable {
         downloadWorker.HTTPHeaderFields = fields
     }
     
-    func setBackgroundCompletionHandler(_ completionHandler: @escaping () -> ()) {
+  func setBackgroundCompletionHandler(_ completionHandler: @escaping () -> Void) {
         backgroundCompletion = completionHandler
     }
     
@@ -117,21 +117,22 @@ class AudioDataManager: AudioDataManagable {
         downloadDirectory = dir
     }
     
-    func attach(callback: @escaping (_ id: ID, _ progress: Double)->()) {
+  func attach(callback: @escaping (_ id: ID, _ progress: Double) -> Void) {
         globalDownloadProgressCallback = callback
     }
 }
 
 // MARK:- Streaming
 extension AudioDataManager {
-    func startStream(withRemoteURL url: AudioURL, callback: @escaping (StreamProgressPTO) -> ()) {
+  func startStream(withRemoteURL url: AudioURL, callback: @escaping (StreamProgressPTO) -> Void) {
         if let data = FileStorage.Audio.read(url.key) {
-            let dto = StreamProgressDTO.init(progress: 1.0, data: data, totalBytesExpected: Int64(data.count))
+      let dto = StreamProgressDTO.init(
+        progress: 1.0, data: data, totalBytesExpected: Int64(data.count))
             callback(StreamProgressPTO(dto: dto))
             return
         }
         
-        let exists = streamingCallbacks.contains { (cb: (ID, (StreamProgressPTO) -> ())) -> Bool in
+    let exists = streamingCallbacks.contains { (cb: (ID, (StreamProgressPTO) -> Void)) -> Bool in
             return cb.0 == url.key
         }
         
@@ -139,9 +140,12 @@ extension AudioDataManager {
             streamingCallbacks.append((url.key, callback))
         }
         
-        downloadWorker.stop(withID: url.key) { [weak self] (fetchedData: Data?, totalBytesExpected: Int64?) in
+    downloadWorker.stop(withID: url.key) {
+      [weak self] (fetchedData: Data?, totalBytesExpected: Int64?) in
             self?.downloadWorker.pauseAllActive()
-            self?.streamWorker.start(withID: url.key, withRemoteURL: url, withInitialData: fetchedData, andTotalBytesExpectedPreviously: totalBytesExpected)
+      self?.streamWorker.start(
+        withID: url.key, withRemoteURL: url, withInitialData: fetchedData,
+        andTotalBytesExpectedPreviously: totalBytesExpected)
         }
     }
     
@@ -159,7 +163,7 @@ extension AudioDataManager {
     
     func deleteStream(withRemoteURL url: AudioURL) {
         streamWorker.stop(withId: url.key)
-        streamingCallbacks.removeAll { (cb: (ID, (StreamProgressPTO) -> ())) -> Bool in
+    streamingCallbacks.removeAll { (cb: (ID, (StreamProgressPTO) -> Void)) -> Bool in
             return cb.0 == url.key
         }
     }
@@ -171,7 +175,7 @@ extension AudioDataManager {
         return FileStorage.Audio.locate(url.key)
     }
     
-    func startDownload(withRemoteURL url: AudioURL, completion: @escaping (URL, Error?) -> ()) {
+  func startDownload(withRemoteURL url: AudioURL, completion: @escaping (URL, Error?) -> Void) {
         let key = url.key
         
         if let savedUrl = FileStorage.Audio.locate(key), FileStorage.Audio.isStored(key) {
@@ -235,5 +239,3 @@ extension AudioDataManager {
         return false
     }
 }
-
-

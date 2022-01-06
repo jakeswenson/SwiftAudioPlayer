@@ -6,9 +6,9 @@
 //  Copyright (c) 2019 tanhakabir. All rights reserved.
 //
 
-import UIKit
-import SwiftAudioPlayer
 import AVFoundation
+import SwiftAudioPlayer
+import UIKit
 
 class ViewController: UIViewController {
     var selectedAudio: AudioInfo = AudioInfo(index: 0)
@@ -38,7 +38,6 @@ class ViewController: UIViewController {
     var isStreaming: Bool = false
     var beingSeeked: Bool = false
     var loopEnabled = false
-    
     
     var downloadId: UInt?
     var durationId: UInt?
@@ -126,7 +125,9 @@ class ViewController: UIViewController {
     
     func checkIfAudioDownloaded() {
         for i in 0...2 {
-            if let savedUrl = SAPlayer.Downloader.getSavedUrl(forRemoteUrl: selectedAudio.getUrl(atIndex: i)) {
+      if let savedUrl = SAPlayer.Downloader.getSavedUrl(
+        forRemoteUrl: selectedAudio.getUrl(atIndex: i))
+      {
                 selectedAudio.addSavedUrl(savedUrl, atIndex: i)
             }
         }
@@ -156,7 +157,8 @@ class ViewController: UIViewController {
             if self.isDownloading {
                 DispatchQueue.main.async {
                     UIView.performWithoutAnimation {
-                        self.downloadButton.setTitle("Cancel \(String(format: "%.2f", (progress * 100)))%", for: .normal)
+            self.downloadButton.setTitle(
+              "Cancel \(String(format: "%.2f", (progress * 100)))%", for: .normal)
                     }
                 }
             }
@@ -220,7 +222,8 @@ class ViewController: UIViewController {
               let downloadId = self.downloadId,
               let queueId = self.queueId,
               let bufferId = self.bufferId,
-              let playingStatusId = self.playingStatusId else { return }
+      let playingStatusId = self.playingStatusId
+    else { return }
         
         SAPlayer.Updates.Duration.unsubscribe(durationId)
         SAPlayer.Updates.ElapsedTime.unsubscribe(elapsedId)
@@ -229,7 +232,6 @@ class ViewController: UIViewController {
         SAPlayer.Updates.StreamingBuffer.unsubscribe(bufferId)
         SAPlayer.Updates.PlayingStatus.unsubscribe(playingStatusId)
     }
-    
     
     @IBAction func scrubberStartedSeeking(_ sender: UISlider) {
         beingSeeked = true
@@ -240,7 +242,6 @@ class ViewController: UIViewController {
         SAPlayer.shared.seekTo(seconds: value)
         beingSeeked = false
     }
-    
     
     @IBAction func rateChanged(_ sender: Any) {
         let speed = rateSlider.value
@@ -280,7 +281,9 @@ class ViewController: UIViewController {
             } else {
                 downloadButton.setTitle("Cancel 0%", for: .normal)
                 isDownloading = true
-                SAPlayer.Downloader.downloadAudio(withRemoteUrl: selectedAudio.url, completion: { [weak self] (url, error) in
+        SAPlayer.Downloader.downloadAudio(
+          withRemoteUrl: selectedAudio.url,
+          completion: { [weak self] (url, error) in
                     guard let self = self else { return }
                     guard error == nil else {
                         DispatchQueue.main.async {
@@ -308,9 +311,11 @@ class ViewController: UIViewController {
         if !isStreaming {
             self.currentUrlLocationLabel.text = "remote url: \(selectedAudio.url.absoluteString)"
             if selectedAudio.index == 2 { // radio
-                SAPlayer.shared.startRemoteAudio(withRemoteUrl: selectedAudio.url, bitrate: .low, mediaInfo: selectedAudio.lockscreenInfo)
+        SAPlayer.shared.startRemoteAudio(
+          withRemoteUrl: selectedAudio.url, bitrate: .low, mediaInfo: selectedAudio.lockscreenInfo)
             } else {
-                SAPlayer.shared.startRemoteAudio(withRemoteUrl: selectedAudio.url, mediaInfo: selectedAudio.lockscreenInfo)
+        SAPlayer.shared.startRemoteAudio(
+          withRemoteUrl: selectedAudio.url, mediaInfo: selectedAudio.lockscreenInfo)
             }
 
             lastPlayedAudioIndex = selectedAudio.index
@@ -382,4 +387,3 @@ class ViewController: UIViewController {
         
     }
 }
-

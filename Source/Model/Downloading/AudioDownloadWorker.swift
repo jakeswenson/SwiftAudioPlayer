@@ -26,7 +26,10 @@
 import Foundation
 
 protocol AudioDataDownloadable: AnyObject {
-    init(allowCellular: Bool, progressCallback: @escaping (_ id: ID, _ progress: Double)->(), doneCallback: @escaping (_ id: ID, _ error: Error?)->(), backgroundDownloadCallback: @escaping ()->())
+  init(
+    allowCellular: Bool, progressCallback: @escaping (_ id: ID, _ progress: Double) -> Void,
+    doneCallback: @escaping (_ id: ID, _ error: Error?) -> Void,
+    backgroundDownloadCallback: @escaping () -> Void)
     
     var numberOfActive: Int { get }
     var numberOfQueued: Int { get }
@@ -35,24 +38,27 @@ protocol AudioDataDownloadable: AnyObject {
     
     func getProgressOfDownload(withID id: ID) -> Double?
     
-    func start(withID id: ID, withRemoteUrl remoteUrl: URL, completion: @escaping (URL, Error?) -> ())
-    func stop(withID id: ID, callback: ((_ dataSoFar: Data?, _ totalBytesExpected: Int64?) -> ())?)
+  func start(
+    withID id: ID, withRemoteUrl remoteUrl: URL, completion: @escaping (URL, Error?) -> Void)
+  func stop(withID id: ID, callback: ((_ dataSoFar: Data?, _ totalBytesExpected: Int64?) -> Void)?)
     func pauseAllActive() //Because of streaming
     func resumeAllActive() //Because of streaming
 }
 
+@available(macOS 11.0, *)
 class AudioDownloadWorker: NSObject, AudioDataDownloadable {
     private let MAX_CONCURRENT_DOWNLOADS = 3
     
     // Given by the AppDelegate
-    private let backgroundCompletion: () -> ()
+  private let backgroundCompletion: () -> Void
     
-    private let progressHandler: (ID, Double) -> ()
-    private let completionHandler: (ID, Error?) -> ()
+  private let progressHandler: (ID, Double) -> Void
+  private let completionHandler: (ID, Error?) -> Void
     
     private let allowsCellularDownload: Bool
     private lazy var session: URLSession = {
-        let config = URLSessionConfiguration.background(withIdentifier: "SwiftAudioPlayer.background_downloader_\(Date.getUTC())")
+    let config = URLSessionConfiguration.background(
+      withIdentifier: "SwiftAudioPlayer.background_downloader_\(Date.getUTC())")
         config.isDiscretionary = !allowsCellularDownload
         config.sessionSendsLaunchEvents = true
         config.allowsCellularAccess = allowsCellularDownload
@@ -73,10 +79,12 @@ class AudioDownloadWorker: NSObject, AudioDataDownloadable {
         return queuedDownloads.count
     }
     
-    required init(allowCellular: Bool,
-                  progressCallback: @escaping (_ id: ID, _ progress: Double)->(),
-                  doneCallback: @escaping (_ id: ID, _ error: Error?)->(),
-                  backgroundDownloadCallback: @escaping ()->()) {
+  required init(
+    allowCellular: Bool,
+    progressCallback: @escaping (_ id: ID, _ progress: Double) -> Void,
+    doneCallback: @escaping (_ id: ID, _ error: Error?) -> Void,
+    backgroundDownloadCallback: @escaping () -> Void
+  ) {
         Log.info("init with allowCellular: \(allowCellular)")
         self.progressHandler = progressCallback
         self.completionHandler = doneCallback
@@ -90,27 +98,34 @@ class AudioDownloadWorker: NSObject, AudioDataDownloadable {
         return activeDownloads.filter { $0.info.id == id }.first?.progress
     }
     
-    func start(withID id: ID, withRemoteUrl remoteUrl: URL, completion: @escaping (URL, Error?) -> ()) {
-        Log.info("startExternal paramID: \(id) activeDownloadIDs: \((activeDownloads.map { $0.info.id } ).toLog)")
+  func start(
+    withID id: ID, withRemoteUrl remoteUrl: URL, completion: @escaping (URL, Error?) -> Void
+  ) {
+    Log.info(
+      "startExternal paramID: \(id) activeDownloadIDs: \((activeDownloads.map { $0.info.id } ).toLog)"
+    )
         let temp = activeDownloads.filter { $0.info.id == id }.count
         guard temp == 0 else {
             return
         }
         
-        let info = queuedDownloads.updatePreservingOldCompletionHandlers(withID: id, withRemoteUrl: remoteUrl, completion: completion)
+    let info = queuedDownloads.updatePreservingOldCompletionHandlers(
+      withID: id, withRemoteUrl: remoteUrl, completion: completion)
         
         start(withInfo: info)
     }
     
     fileprivate func start(withInfo info: DownloadInfo) {
-        Log.info("paramID: \(info.id) activeDownloadIDs: \((activeDownloads.map { $0.info.id } ).toLog)")
+    Log.info(
+      "paramID: \(info.id) activeDownloadIDs: \((activeDownloads.map { $0.info.id } ).toLog)")
         let temp = activeDownloads.filter { $0.info.id == info.id }.count
         guard temp == 0 else {
             return
         }
         
         guard numberOfActive < MAX_CONCURRENT_DOWNLOADS else {
-            _ = queuedDownloads.updatePreservingOldCompletionHandlers(withID: info.id, withRemoteUrl: info.remoteUrl)
+      _ = queuedDownloads.updatePreservingOldCompletionHandlers(
+        withID: info.id, withRemoteUrl: info.remoteUrl)
             return
         }
         
@@ -144,7 +159,8 @@ class AudioDownloadWorker: NSObject, AudioDataDownloadable {
         }
     }
     
-    func stop(withID id: ID, callback: ((_ dataSoFar: Data?, _ totalBytesExpected: Int64?) -> ())?) {
+  func stop(withID id: ID, callback: ((_ dataSoFar: Data?, _ totalBytesExpected: Int64?) -> Void)?)
+  {
         Log.info("paramId: \(id), activeDownloadIDs: \((activeDownloads.map { $0.info.id } ).toLog)")
         for download in activeDownloads {
             if download.info.id == id && download.task.state == .running {
@@ -163,22 +179,32 @@ class AudioDownloadWorker: NSObject, AudioDataDownloadable {
     }
 }
 
+@available(macOS 11.0, *)
 extension AudioDownloadWorker: URLSessionDownloadDelegate {
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+  func urlSession(
+    _ session: URLSession, downloadTask: URLSessionDownloadTask,
+    didFinishDownloadingTo location: URL
+  ) {
         let activeTask = activeDownloads.filter { $0.task == downloadTask }.first
         
         guard let task = activeTask else {
-            Log.monitor("could not find corresponding active download task when done downloading: \(downloadTask.currentRequest?.url?.absoluteString ?? "nil url")")
+      Log.monitor(
+        "could not find corresponding active download task when done downloading: \(downloadTask.currentRequest?.url?.absoluteString ?? "nil url")"
+      )
             return
         }
         
         guard let fileType = downloadTask.response?.suggestedFilename?.pathExtension else {
-            Log.monitor("No file type exists for file from downloading.. id: \(downloadTask.taskDescription ?? "nil") :: url: \(task.info.remoteUrl) where it suggested filename: \(downloadTask.response?.suggestedFilename ?? "nil")")
+      Log.monitor(
+        "No file type exists for file from downloading.. id: \(downloadTask.taskDescription ?? "nil") :: url: \(task.info.remoteUrl) where it suggested filename: \(downloadTask.response?.suggestedFilename ?? "nil")"
+      )
             return
         }
         
         let destinationUrl = FileStorage.Audio.getUrl(givenId: task.info.id, andFileExtension: fileType)
-        Log.info("Writing download file with id: \(task.info.id) to file named: \(destinationUrl.lastPathComponent)")
+    Log.info(
+      "Writing download file with id: \(task.info.id) to file named: \(destinationUrl.lastPathComponent)"
+    )
         
         // https://stackoverflow.com/questions/20251432/cant-move-file-after-background-download-no-such-file
         // Apparently, the data of the temporary location get deleted outside of this function immediately, so others recommended extracting the data and writing it, this is why I'm not using DiskUtil
@@ -190,15 +216,20 @@ extension AudioDownloadWorker: URLSessionDownloadDelegate {
         } catch {
             if (error as NSError).code == NSFileWriteFileExistsError {
                 do {
-                    Log.info("File already existed at attempted download url: \(destinationUrl.absoluteString)")
+          Log.info(
+            "File already existed at attempted download url: \(destinationUrl.absoluteString)")
                     try FileManager.default.removeItem(at: destinationUrl)
                     _ = try FileManager.default.replaceItemAt(destinationUrl, withItemAt: location)
                     Log.info("Replaced previous file at url: \(destinationUrl.absoluteString)")
                 } catch {
-                    Log.monitor("Error moving file after download for task id: \(task.info.id) and error: \(error.localizedDescription)")
+          Log.monitor(
+            "Error moving file after download for task id: \(task.info.id) and error: \(error.localizedDescription)"
+          )
                 }
             } else {
-                Log.monitor("Error moving file after download for task id: \(task.info.id) and error: \(error.localizedDescription)")
+        Log.monitor(
+          "Error moving file after download for task id: \(task.info.id) and error: \(error.localizedDescription)"
+        )
             }
         }
         
@@ -232,7 +263,8 @@ extension AudioDownloadWorker: URLSessionDownloadDelegate {
             
             if let err: NSError = error as NSError? {
                 if err.domain == NSPOSIXErrorDomain && err.code == 2 {
-                    Log.error("download error where file says it doesn't exist, this could be because of bad network")
+          Log.error(
+            "download error where file says it doesn't exist, this could be because of bad network")
                     return
                 }
             }
@@ -247,11 +279,15 @@ extension AudioDownloadWorker: URLSessionDownloadDelegate {
                 }
             }
             
-            Log.monitor("\(task.currentRequest?.url?.absoluteString ?? "nil url") error: \(e.localizedDescription)")
+      Log.monitor(
+        "\(task.currentRequest?.url?.absoluteString ?? "nil url") error: \(e.localizedDescription)")
         }
     }
     
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+  func urlSession(
+    _ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64,
+    totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64
+  ) {
         var found: Bool = false
         
         for download in activeDownloads {
@@ -278,14 +314,16 @@ extension AudioDownloadWorker {
 // MARK:- Helper Classes
 extension AudioDownloadWorker {
     fileprivate struct DownloadInfo: Hashable {
-        static func == (lhs: AudioDownloadWorker.DownloadInfo, rhs: AudioDownloadWorker.DownloadInfo) -> Bool {
+    static func == (lhs: AudioDownloadWorker.DownloadInfo, rhs: AudioDownloadWorker.DownloadInfo)
+      -> Bool
+    {
             return lhs.id == rhs.id && lhs.remoteUrl == rhs.remoteUrl
         }
         
         let id: ID
         let remoteUrl: URL
         let rank: Int
-        var completionHandlers: [(URL, Error?) -> ()]
+    var completionHandlers: [(URL, Error?) -> Void]
         
         func hash(into hasher: inout Hasher) {
             hasher.combine(id)
@@ -294,7 +332,9 @@ extension AudioDownloadWorker {
     }
     
     private class ActiveDownload: Hashable {
-        static func == (lhs: AudioDownloadWorker.ActiveDownload, rhs: AudioDownloadWorker.ActiveDownload) -> Bool {
+    static func == (
+      lhs: AudioDownloadWorker.ActiveDownload, rhs: AudioDownloadWorker.ActiveDownload
+    ) -> Bool {
             return lhs.info.id == rhs.info.id
         }
         
@@ -332,19 +372,23 @@ extension Set where Element == AudioDownloadWorker.DownloadInfo {
         return ret
     }
     
-    mutating func updatePreservingOldCompletionHandlers(withID id: ID, withRemoteUrl remoteUrl: URL, completion: ((URL, Error?) -> ())? = nil) -> AudioDownloadWorker.DownloadInfo {
+  mutating func updatePreservingOldCompletionHandlers(
+    withID id: ID, withRemoteUrl remoteUrl: URL, completion: ((URL, Error?) -> Void)? = nil
+  ) -> AudioDownloadWorker.DownloadInfo {
         
         let rank = Date.getUTC()
         
-        let tempHandlers: [(URL, Error?) -> ()] = completion != nil ? [completion!] : []
+    let tempHandlers: [(URL, Error?) -> Void] = completion != nil ? [completion!] : []
         
-        var newInfo = AudioDownloadWorker.DownloadInfo.init(id: id, remoteUrl: remoteUrl, rank: rank, completionHandlers: tempHandlers)
+    var newInfo = AudioDownloadWorker.DownloadInfo.init(
+      id: id, remoteUrl: remoteUrl, rank: rank, completionHandlers: tempHandlers)
         
         if let previous = self.update(with: newInfo) {
             let prevHandlers = previous.completionHandlers
             let newHandlers = prevHandlers + tempHandlers
             
-            newInfo = AudioDownloadWorker.DownloadInfo.init(id: id, remoteUrl: remoteUrl, rank: rank, completionHandlers: newHandlers)
+      newInfo = AudioDownloadWorker.DownloadInfo.init(
+        id: id, remoteUrl: remoteUrl, rank: rank, completionHandlers: newHandlers)
             
             self.update(with: newInfo)
         }
@@ -364,7 +408,9 @@ extension Set where Element == AudioDownloadWorker.DownloadInfo {
         }
         
         guard matchCount <= 1 else {
-            Log.error("Found \(matchCount) matches of queued info with the same id of: \(id), this should have never happened.")
+      Log.error(
+        "Found \(matchCount) matches of queued info with the same id of: \(id), this should have never happened."
+      )
             return
         }
         

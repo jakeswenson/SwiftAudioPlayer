@@ -29,16 +29,15 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import AVFoundation
 import AudioToolbox
+import Foundation
 
-
-let ReaderReachedEndOfDataError: OSStatus = 932332581
-let ReaderNotEnoughDataError: OSStatus = 932332582
-let ReaderMissingSourceFormatError: OSStatus = 932332583
-let ReaderMissingParserError: OSStatus = 932332584
-let ReaderShouldNotHappenError: OSStatus = 932332585
+let ReaderReachedEndOfDataError: OSStatus = 932_332_581
+let ReaderNotEnoughDataError: OSStatus = 932_332_582
+let ReaderMissingSourceFormatError: OSStatus = 932_332_583
+let ReaderMissingParserError: OSStatus = 932_332_584
+let ReaderShouldNotHappenError: OSStatus = 932_332_585
 
 public enum ConverterError: LocalizedError {
     case cannotLockQueue
@@ -86,8 +85,11 @@ public enum ConverterError: LocalizedError {
             Log.debug("Could not create a PCM Buffer because reader does not have a converter yet")
             return "Could not create a PCM Buffer because reader does not have a converter yet"
         case .throttleParsingBuffersForEngine:
-            Log.warn("Preventing the reader from creating more PCM buffers since the player has more than 60 seconds of audio already to play")
-            return "Preventing the reader from creating more PCM buffers since the player has more than 60 seconds of audio already to play"
+      Log.warn(
+        "Preventing the reader from creating more PCM buffers since the player has more than 60 seconds of audio already to play"
+      )
+      return
+        "Preventing the reader from creating more PCM buffers since the player has more than 60 seconds of audio already to play"
         case .failedToCreateParser:
             Log.warn("Could not create a parser")
             return "Could not create a parser"
@@ -114,10 +116,12 @@ public enum ConverterError: LocalizedError {
             return "Input sample rate out of range"
         case kAudioConverterErr_OutputSampleRateOutOfRange:
             return "Output sample rate out of range"
+    #if !os(macOS)
         case kAudioConverterErr_HardwareInUse:
             return "Hardware is in use"
         case kAudioConverterErr_NoHardwarePermission:
             return "No hardware permission"
+    #endif
         default:
             return "Unspecified error"
         }

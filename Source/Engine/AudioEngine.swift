@@ -23,8 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import AVFoundation
+import Foundation
 
 protocol AudioEngineProtocol {
     var key: Key { get }
@@ -47,7 +47,8 @@ class AudioEngine: AudioEngineProtocol {
     var playerNode: AVAudioPlayerNode!
     private var engineInvalidated: Bool = false
     
-    static let defaultEngineAudioFormat: AVAudioFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 44100, channels: 2, interleaved: false)!
+  static let defaultEngineAudioFormat: AVAudioFormat = AVAudioFormat(
+    commonFormat: .pcmFormatFloat32, sampleRate: 44100, channels: 2, interleaved: false)!
     
     var state:TimerState = .suspended
     enum TimerState {
@@ -81,8 +82,13 @@ class AudioEngine: AudioEngineProtocol {
         }
     }
     
-    var bufferedSecondsDebouncer: SAAudioAvailabilityRange = SAAudioAvailabilityRange(startingNeedle: 0.0, durationLoadedByNetwork: 0.0, predictedDurationToLoad: Double.greatestFiniteMagnitude, isPlayable: false)
-    var bufferedSeconds: SAAudioAvailabilityRange =  SAAudioAvailabilityRange(startingNeedle: 0.0, durationLoadedByNetwork: 0.0, predictedDurationToLoad: Double.greatestFiniteMagnitude, isPlayable: false) {
+  var bufferedSecondsDebouncer: SAAudioAvailabilityRange = SAAudioAvailabilityRange(
+    startingNeedle: 0.0, durationLoadedByNetwork: 0.0,
+    predictedDurationToLoad: Double.greatestFiniteMagnitude, isPlayable: false)
+  var bufferedSeconds: SAAudioAvailabilityRange = SAAudioAvailabilityRange(
+    startingNeedle: 0.0, durationLoadedByNetwork: 0.0,
+    predictedDurationToLoad: Double.greatestFiniteMagnitude, isPlayable: false)
+  {
         didSet {
             if bufferedSeconds.startingNeedle == 0.0 && bufferedSeconds.durationLoadedByNetwork == 0.0 {
                 bufferedSecondsDebouncer = bufferedSeconds
@@ -90,11 +96,15 @@ class AudioEngine: AudioEngineProtocol {
                 return
             }
             
-            if bufferedSeconds.startingNeedle == oldValue.startingNeedle && bufferedSeconds.durationLoadedByNetwork == oldValue.durationLoadedByNetwork {
+      if bufferedSeconds.startingNeedle == oldValue.startingNeedle
+        && bufferedSeconds.durationLoadedByNetwork == oldValue.durationLoadedByNetwork
+      {
                 return
             }
             
-            if bufferedSeconds.durationLoadedByNetwork - DEBOUNCING_BUFFER_TIME < bufferedSecondsDebouncer.durationLoadedByNetwork {
+      if bufferedSeconds.durationLoadedByNetwork - DEBOUNCING_BUFFER_TIME
+        < bufferedSecondsDebouncer.durationLoadedByNetwork
+      {
                 Log.debug("skipping pushing buffer: \(bufferedSeconds)")
                 return
             }
@@ -163,7 +173,7 @@ class AudioEngine: AudioEngineProtocol {
         Log.info("deinit AVAudioEngine for \(key)")
     }
     
-    func doRepeatedly(timeInterval: Double, _ closure: @escaping () -> ()) {
+  func doRepeatedly(timeInterval: Double, _ closure: @escaping () -> Void) {
         // A common error in AVAudioEngine is 'required condition is false: nil == owningEngine || GetEngine() == owningEngine'
         // where there can only be one instance of engine running at a time and if there is already one when trying to start
         // a new one then this error will be thrown.
@@ -174,7 +184,8 @@ class AudioEngine: AudioEngineProtocol {
         // To be in better control of references and to mitigate any unforeseen issues, I decided to implement a recurisive version
         // of the repeat block timer so I'm in full control of when to invalidate.
         
-        Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] (timer: Timer) in
+    Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) {
+      [weak self] (timer: Timer) in
             guard let self = self else { return }
             guard !self.engineInvalidated else {
                 self.delegate = nil

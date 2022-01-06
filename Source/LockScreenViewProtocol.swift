@@ -25,7 +25,7 @@
 
 import Foundation
 import MediaPlayer
-import UIKit
+import SwiftUI
 
 public protocol LockScreenViewPresenter : AnyObject {
     func getIsPlaying() -> Bool
@@ -43,8 +43,8 @@ public protocol LockScreenViewProtocol {
     var skipBackwardSeconds: Double { get set }
 }
 
-public extension LockScreenViewProtocol {
-    func clearLockScreenInfo() {
+extension LockScreenViewProtocol {
+  public func clearLockScreenInfo() {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = [:]
         let commandCenter = MPRemoteCommandCenter.shared()
         commandCenter.playCommand.removeTarget(nil)
@@ -55,7 +55,7 @@ public extension LockScreenViewProtocol {
     }
     
     @available(iOS 10.0, tvOS 10.0, *)
-    func setLockScreenInfo(withMediaInfo info: SALockScreenInfo?, duration: Double) {
+  public func setLockScreenInfo(withMediaInfo info: SALockScreenInfo?, duration: Double) {
         var nowPlayingInfo:[String : Any] = [:]
         
         guard let info = info else {
@@ -80,7 +80,8 @@ public extension LockScreenViewProtocol {
         nowPlayingInfo[MPMediaItemPropertyMediaType] = MPMediaType.podcast.rawValue
         nowPlayingInfo[MPMediaItemPropertyPodcastTitle] = title
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0 //because default is 1.0. If we pause audio then it keeps ticking
-        nowPlayingInfo[MPMediaItemPropertyReleaseDate] = Date(timeIntervalSince1970: TimeInterval(releaseDate))
+    nowPlayingInfo[MPMediaItemPropertyReleaseDate] = Date(
+      timeIntervalSince1970: TimeInterval(releaseDate))
 
         if let artwork = info.artwork {
             nowPlayingInfo[MPMediaItemPropertyArtwork] =
@@ -88,8 +89,10 @@ public extension LockScreenViewProtocol {
                 return artwork
             }
         } else {
-            nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: UIImage().size) { size in
-                return UIImage()
+      nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(
+        boundsSize: PlatformImage().size
+      ) { size in
+        return PlatformImage()
             }
         }
         
@@ -97,7 +100,7 @@ public extension LockScreenViewProtocol {
     }
     
     // https://stackoverflow.com/questions/36754934/update-mpremotecommandcenter-play-pause-button
-    func setLockScreenControls(presenter: LockScreenViewPresenter) {
+  public func setLockScreenControls(presenter: LockScreenViewPresenter) {
         // Get the shared MPRemoteCommandCenter
         let commandCenter = MPRemoteCommandCenter.shared()
         
@@ -161,29 +164,31 @@ public extension LockScreenViewProtocol {
         }
     }
     
-    func updateLockScreenElapsedTime(needle: Double) {
-        MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyElapsedPlaybackTime] = NSNumber(value: Double(needle))
+  public func updateLockScreenElapsedTime(needle: Double) {
+    MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyElapsedPlaybackTime] =
+      NSNumber(value: Double(needle))
     }
     
-    func updateLockScreenPlaybackDuration(duration: Double) {
-        MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyPlaybackDuration] = NSNumber(value: duration)
+  public func updateLockScreenPlaybackDuration(duration: Double) {
+    MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyPlaybackDuration] =
+      NSNumber(value: duration)
     }
     
-    func updateLockScreenPaused(){
+  public func updateLockScreenPaused() {
         MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
     }
     
-    func updateLockScreenPlaying(){
+  public func updateLockScreenPlaying() {
         MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
     }
     
-    func updateLockScreenChangePlaybackRate(speed: Float){
+  public func updateLockScreenChangePlaybackRate(speed: Float) {
         if speed > 0.0{
             MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoPropertyPlaybackRate] = speed
         }
     }
     
-    func updateLockScreenSkipIntervals() {
+  public func updateLockScreenSkipIntervals() {
         let commandCenter = MPRemoteCommandCenter.shared()
         commandCenter.skipBackwardCommand.isEnabled = skipBackwardSeconds > 0
         commandCenter.skipBackwardCommand.preferredIntervals = [skipBackwardSeconds] as [NSNumber]

@@ -31,7 +31,7 @@ protocol AudioThrottleDelegate: AnyObject {
 
 protocol AudioThrottleable {
     init(withRemoteUrl url: AudioURL, withDelegate delegate: AudioThrottleDelegate)
-    func pullNextDataPacket(_ callback: @escaping (Data?) -> ())
+  func pullNextDataPacket(_ callback: @escaping (Data?) -> Void)
     func tellSeek(offset: UInt64)
     func pollRangeOfBytesAvailable() -> (UInt64, UInt64)
     func invalidate()
@@ -69,9 +69,11 @@ class AudioThrottler: AudioThrottleable {
         self.url = url
         self.delegate = delegate
         
-        AudioDataManager.shared.startStream(withRemoteURL: url) { [weak self] (pto: StreamProgressPTO) in
+    AudioDataManager.shared.startStream(withRemoteURL: url) {
+      [weak self] (pto: StreamProgressPTO) in
             guard let self = self else {return}
-            Log.debug("received stream data of size \(pto.getData().count) and progress: \(pto.getProgress())")
+      Log.debug(
+        "received stream data of size \(pto.getData().count) and progress: \(pto.getProgress())")
 
             if let totalBytesExpected = pto.getTotalBytesExpected() {
                 self.totalBytesExpected = totalBytesExpected
@@ -79,12 +81,12 @@ class AudioThrottler: AudioThrottleable {
             
             self.queue.async { [weak self] in
                 self?.networkData.append(pto.getData())
-                StreamingDownloadDirector.shared.didUpdate(url.key, networkStreamProgress: pto.getProgress())
+        StreamingDownloadDirector.shared.didUpdate(
+          url.key, networkStreamProgress: pto.getProgress())
             }
         }
     }
 
-    
     func tellSeek(offset: UInt64) {
         Log.info("seek with offset: \(offset)")
         
@@ -132,7 +134,7 @@ class AudioThrottler: AudioThrottleable {
         return (UInt64(start), UInt64(end))
     }
     
-    func pullNextDataPacket(_ callback: @escaping (Data?) -> ()) {
+  func pullNextDataPacket(_ callback: @escaping (Data?) -> Void) {
         queue.async { [weak self] in
             guard let self = self else { return }
             guard self.lastSentDataPacketIndex < self.networkData.count - 1 else {
@@ -153,10 +155,8 @@ class AudioThrottler: AudioThrottleable {
 
 extension Array where Element == Data {
     var sum: Int {
-        get {
             guard count > 0 else { return 0 }
             return self.reduce(0) { $0 + $1.count }
-        }
     }
     
     func getIndexContainingByteOffset(_ offset: Int) -> Int? {

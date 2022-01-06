@@ -40,7 +40,9 @@ extension Data {
         }
     }
     
-    mutating func accessMutableBytes<R>(_ body: (UnsafeMutablePointer<UInt8>) throws -> R) rethrows -> R {
+  mutating func accessMutableBytes<R>(_ body: (UnsafeMutablePointer<UInt8>) throws -> R) rethrows
+    -> R
+  {
         return try withUnsafeMutableBytes { (rawBufferPointer: UnsafeMutableRawBufferPointer) -> R in
             let unsafeMutableBufferPointer = rawBufferPointer.bindMemory(to: UInt8.self)
             guard let unsafeMutablePointer = unsafeMutableBufferPointer.baseAddress else {

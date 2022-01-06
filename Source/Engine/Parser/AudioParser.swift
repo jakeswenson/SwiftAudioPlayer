@@ -29,26 +29,22 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import AVFoundation
+import Foundation
 
-/**
- DEFINITIONS
- 
- An audio stream is a continuous series of data that represents a sound, such as a song.
- 
- A channel is a discrete track of monophonic audio. A monophonic stream has one channel; a stereo stream has two channels.
- 
- A sample is single numerical value for a single audio channel in an audio stream.
- 
- A frame is a collection of time-coincident samples. For instance, a linear PCM stereo sound file has two samples per frame, one for the left channel and one for the right channel.
- 
- A packet is a collection of one or more contiguous frames. A packet defines the smallest meaningful set of frames for a given audio data format, and is the smallest data unit for which time can be measured. In linear PCM audio, a packet holds a single frame. In compressed formats, it typically holds more; in some formats, the number of frames per packet varies.
- 
- The sample rate for a stream is the number of frames per second of uncompressed (or, for compressed formats, the equivalent in decompressed) audio.
- 
- */
-
+/// DEFINITIONS
+///
+/// An audio stream is a continuous series of data that represents a sound, such as a song.
+///
+/// A channel is a discrete track of monophonic audio. A monophonic stream has one channel; a stereo stream has two channels.
+///
+/// A sample is single numerical value for a single audio channel in an audio stream.
+///
+/// A frame is a collection of time-coincident samples. For instance, a linear PCM stereo sound file has two samples per frame, one for the left channel and one for the right channel.
+///
+/// A packet is a collection of one or more contiguous frames. A packet defines the smallest meaningful set of frames for a given audio data format, and is the smallest data unit for which time can be measured. In linear PCM audio, a packet holds a single frame. In compressed formats, it typically holds more; in some formats, the number of frames per packet varies.
+///
+/// The sample rate for a stream is the number of frames per second of uncompressed (or, for compressed formats, the equivalent in decompressed) audio.
 
 //TODO: what if user seeks beyond the data we have? What if we're done but user seeks even further than what we have
 
@@ -64,7 +60,8 @@ class AudioParser: AudioParsable {
     public var fileAudioFormat: AVAudioFormat? {
         didSet {
             if let format = fileAudioFormat, oldValue == nil {
-                MIN_PACKETS_TO_HAVE_AVAILABLE_BEFORE_THROTTLING_PARSING = framesPerBuffer/Int(format.streamDescription.pointee.mFramesPerPacket)
+        MIN_PACKETS_TO_HAVE_AVAILABLE_BEFORE_THROTTLING_PARSING =
+          framesPerBuffer / Int(format.streamDescription.pointee.mFramesPerPacket)
                 parsedFileAudioFormatCallback(format)
             }
         }
@@ -78,14 +75,15 @@ class AudioParser: AudioParsable {
     //Our use
     var expectedFileSizeInBytes: UInt64?
     var networkProgress: Double = 0
-    var parsedFileAudioFormatCallback: (AVAudioFormat) -> ()
+  var parsedFileAudioFormatCallback: (AVAudioFormat) -> Void
     var indexSeekOffset: AVAudioPacketCount = 0
     var shouldPreventPacketFromFillingUp = false
     
     public var totalPredictedPacketCount: AVAudioPacketCount {
         if parsedAudioHeaderPacketCount != 0 {
             //TODO: we should log the duration to the server for better user experience
-            return max(AVAudioPacketCount(parsedAudioHeaderPacketCount), AVAudioPacketCount(audioPackets.count))
+      return max(
+        AVAudioPacketCount(parsedAudioHeaderPacketCount), AVAudioPacketCount(audioPackets.count))
         }
         
         let sizeOfFileInBytes: UInt64 = expectedFileSizeInBytes != nil ? expectedFileSizeInBytes! : 0
@@ -148,7 +146,10 @@ class AudioParser: AudioParsable {
     
     var streamChangeListenerId: UInt?
     
-    init(withRemoteUrl url: AudioURL, bufferSize: Int,  parsedFileAudioFormatCallback: @escaping(AVAudioFormat) -> ()) throws {
+  init(
+    withRemoteUrl url: AudioURL, bufferSize: Int,
+    parsedFileAudioFormatCallback: @escaping (AVAudioFormat) -> Void
+  ) throws {
         self.url = url
         self.framesPerBuffer = bufferSize
         self.parsedFileAudioFormatCallback = parsedFileAudioFormatCallback
@@ -163,7 +164,9 @@ class AudioParser: AudioParsable {
             self.lockQueue.sync {
                 if self.fileAudioFormat == nil {
                     self.processNextDataPacket()
-                } else if self.audioPackets.count - self.lastSentAudioPacketIndex < self.MIN_PACKETS_TO_HAVE_AVAILABLE_BEFORE_THROTTLING_PARSING {
+        } else if self.audioPackets.count - self.lastSentAudioPacketIndex
+          < self.MIN_PACKETS_TO_HAVE_AVAILABLE_BEFORE_THROTTLING_PARSING
+        {
                     self.processNextDataPacket()
                 }
             }
@@ -171,7 +174,11 @@ class AudioParser: AudioParsable {
         
         let context = unsafeBitCast(self, to: UnsafeMutableRawPointer.self)
         //Open the stream and when we call parse data is fed into this stream
-        guard AudioFileStreamOpen(context, ParserPropertyListener, ParserPacketListener, kAudioFileMP3Type, &streamID) == noErr else {
+    guard
+      AudioFileStreamOpen(
+        context, ParserPropertyListener, ParserPacketListener, kAudioFileMP3Type, &streamID)
+        == noErr
+    else {
             throw ParserError.couldNotOpenStream
         }
     }
@@ -182,7 +189,8 @@ class AudioParser: AudioParsable {
         }
     }
     
-    func pullPacket(atIndex index: AVAudioPacketCount) throws -> (AudioStreamPacketDescription?, Data) {
+  func pullPacket(atIndex index: AVAudioPacketCount) throws -> (AudioStreamPacketDescription?, Data)
+  {
         determineIfMoreDataNeedsToBeParsed(index: index)
         
         // Check if we've reached the end of the packets. We have two scenarios:
@@ -198,7 +206,9 @@ class AudioParser: AudioParsable {
                     exception = ParserError.readerAskingBeyondEndOfFile
                     return
                 } else {
-                    Log.debug("Tried to pull packet at index: \(packetIndex) when only have: \(self.audioPackets.count), we predict \(self.totalPredictedPacketCount) in total")
+          Log.debug(
+            "Tried to pull packet at index: \(packetIndex) when only have: \(self.audioPackets.count), we predict \(self.totalPredictedPacketCount) in total"
+          )
                     exception = ParserError.notEnoughDataForReader
                     return
                 }
@@ -216,7 +226,9 @@ class AudioParser: AudioParsable {
     
     private func determineIfMoreDataNeedsToBeParsed(index: AVAudioPacketCount) {
         lockQueue.sync {
-            if index > self.audioPackets.count - self.MIN_PACKETS_TO_HAVE_AVAILABLE_BEFORE_THROTTLING_PARSING {
+      if index > self.audioPackets.count
+        - self.MIN_PACKETS_TO_HAVE_AVAILABLE_BEFORE_THROTTLING_PARSING
+      {
                 self.processNextDataPacket()
             }
         }
@@ -226,7 +238,9 @@ class AudioParser: AudioParsable {
         //Already within the processed audio packets. Ignore
         var isIndexValid: Bool = true
         lockQueue.sync {
-            if self.indexSeekOffset <= index && index < self.audioPackets.count + Int(self.indexSeekOffset) {
+      if self.indexSeekOffset <= index
+        && index < self.audioPackets.count + Int(self.indexSeekOffset)
+      {
                 isIndexValid = false
             }
         }
@@ -253,7 +267,9 @@ class AudioParser: AudioParsable {
     private func getOffset(fromPacketIndex index: AVAudioPacketCount) -> UInt64? {
         //Clear current buffer if we have audio format
         guard fileAudioFormat != nil, let bytesPerPacket = self.averageBytesPerPacket else {
-            Log.error("should not get here \(String(describing: fileAudioFormat)) and \(String(describing: self.averageBytesPerPacket))")
+      Log.error(
+        "should not get here \(String(describing: fileAudioFormat)) and \(String(describing: self.averageBytesPerPacket))"
+      )
             return nil
         }
         
@@ -265,11 +281,15 @@ class AudioParser: AudioParsable {
         
         let startPacket = getPacket(fromOffset: range.0) != nil ? getPacket(fromOffset: range.0)! : 0
         
-        guard let startFrame = getFrame(forPacket: startPacket), let startNeedle = getNeedle(forFrame: startFrame) else {
+    guard let startFrame = getFrame(forPacket: startPacket),
+      let startNeedle = getNeedle(forFrame: startFrame)
+    else {
             return (0, 0)
         }
         
-        guard let endPacket = getPacket(fromOffset: range.1), let endFrame = getFrame(forPacket: endPacket), let endNeedle = getNeedle(forFrame: endFrame) else {
+    guard let endPacket = getPacket(fromOffset: range.1),
+      let endFrame = getFrame(forPacket: endPacket), let endNeedle = getNeedle(forFrame: endFrame)
+    else {
             return (0, 0)
         }
         
@@ -277,7 +297,9 @@ class AudioParser: AudioParsable {
     }
     
     private func getPacket(fromOffset offset: UInt64) -> AVAudioPacketCount? {
-        guard fileAudioFormat != nil, let bytesPerPacket = self.averageBytesPerPacket else { return nil }
+    guard fileAudioFormat != nil, let bytesPerPacket = self.averageBytesPerPacket else {
+      return nil
+    }
         let audioDataBytes = Int(offset) - Int(parsedAudioDataOffset)
         
         guard audioDataBytes > 0 else { // Because we error out if we try to set a negative number as AVAudioPacketCount which is a UInt32
@@ -288,12 +310,16 @@ class AudioParser: AudioParsable {
     }
     
     private func getFrame(forPacket packet: AVAudioPacketCount) -> AVAudioFrameCount? {
-        guard let framesPerPacket = fileAudioFormat?.streamDescription.pointee.mFramesPerPacket else { return nil }
+    guard let framesPerPacket = fileAudioFormat?.streamDescription.pointee.mFramesPerPacket else {
+      return nil
+    }
         return packet * framesPerPacket
     }
     
     private func getNeedle(forFrame frame: AVAudioFrameCount) -> Needle? {
-        guard let _ = fileAudioFormat?.streamDescription.pointee, let frameCount = totalPredictedAudioFrameCount, let duration = predictedDuration else { return nil }
+    guard let _ = fileAudioFormat?.streamDescription.pointee,
+      let frameCount = totalPredictedAudioFrameCount, let duration = predictedDuration
+    else { return nil }
         
         guard duration > 0 else { return nil }
         
@@ -330,7 +356,6 @@ class AudioParser: AudioParsable {
          – we might forget about commenting this out  and run into a bug
          */
         
-        
     }
     
     private func processNextDataPacket() {
@@ -339,7 +364,9 @@ class AudioParser: AudioParsable {
             guard let data = d else { return }
             
             self.lockQueue.sync {
-                Log.debug("processing data count: \(data.count) :: already had \(self.audioPackets.count) audio packets")
+        Log.debug(
+          "processing data count: \(data.count) :: already had \(self.audioPackets.count) audio packets"
+        )
             }
             self.shouldPreventPacketFromFillingUp = false
             do {

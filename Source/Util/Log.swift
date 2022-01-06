@@ -42,7 +42,10 @@ class Log {
      - Parameter functionName: automatically generated based on the function that called this function
      - Parameter lineNumber: automatically generated based on the line that called this function
      */
-    public static func test(_ logMessage: Any, classPath: String = #file, functionName: String = #function, lineNumber: Int = #line) {
+  public static func test(
+    _ logMessage: Any, classPath: String = #file, functionName: String = #function,
+    lineNumber: Int = #line
+  ) {
         let fileName = URLUtil.getNameFromStringPath(classPath)
         if logLevel.rawValue <= LogLevel.TEST.rawValue {
             let log = OSLog(subsystem: SUBSYSTEM, category: "TEST  ❇️❇️❇️❇️")
@@ -63,7 +66,10 @@ class Log {
      - Parameter functionName: automatically generated based on the function that called this function
      - Parameter lineNumber: automatically generated based on the line that called this function
      */
-    public static func error(_ logMessage: Any, classPath: String = #file, functionName: String = #function, lineNumber: Int = #line) {
+  public static func error(
+    _ logMessage: Any, classPath: String = #file, functionName: String = #function,
+    lineNumber: Int = #line
+  ) {
         let fileName = URLUtil.getNameFromStringPath(classPath)
         if logLevel.rawValue <= LogLevel.ERROR.rawValue {
             let log = OSLog(subsystem: SUBSYSTEM, category: "ERROR 🛑🛑🛑🛑")
@@ -89,7 +95,10 @@ class Log {
      - Parameter functionName: automatically generated based on the function that called this function
      - Parameter lineNumber: automatically generated based on the line that called this function
      */
-    public static func monitor(_ logMessage: Any, classPath: String = #file, functionName: String = #function, lineNumber: Int = #line) {
+  public static func monitor(
+    _ logMessage: Any, classPath: String = #file, functionName: String = #function,
+    lineNumber: Int = #line
+  ) {
         let fileName = URLUtil.getNameFromStringPath(classPath)
         if logLevel.rawValue <= LogLevel.ERROR.rawValue {
             let log = OSLog(subsystem: SUBSYSTEM, category: "ERROR 🔥🔥🔥🔥")
@@ -110,7 +119,10 @@ class Log {
      - Parameter functionName: automatically generated based on the function that called this function
      - Parameter lineNumber: automatically generated based on the line that called this function
      */
-    public static func warn(_ logMessage: Any, classPath: String = #file, functionName: String = #function, lineNumber: Int = #line) {
+  public static func warn(
+    _ logMessage: Any, classPath: String = #file, functionName: String = #function,
+    lineNumber: Int = #line
+  ) {
         let fileName = URLUtil.getNameFromStringPath(classPath)
         if logLevel.rawValue <= LogLevel.WARN.rawValue {
             let log = OSLog(subsystem: SUBSYSTEM, category: "WARN  ⚠️⚠️⚠️⚠️")
@@ -136,7 +148,10 @@ class Log {
      - Parameter functionName: automatically generated based on the function that called this function
      - Parameter lineNumber: automatically generated based on the line that called this function
      */
-    public static func info(_ logMessage: Any, classPath: String = #file, functionName: String = #function, lineNumber: Int = #line) {
+  public static func info(
+    _ logMessage: Any, classPath: String = #file, functionName: String = #function,
+    lineNumber: Int = #line
+  ) {
         let fileName = URLUtil.getNameFromStringPath(classPath)
         if logLevel.rawValue <= LogLevel.INFO.rawValue {
             let log = OSLog(subsystem: SUBSYSTEM, category: "INFO  🖤🖤🖤🖤")
@@ -157,7 +172,10 @@ class Log {
      - Parameter functionName: automatically generated based on the function that called this function
      - Parameter lineNumber: automatically generated based on the line that called this function
      */
-    public static func debug(_ logMessage: Any?..., classPath: String = #file, functionName: String = #function, lineNumber: Int = #line) {
+  public static func debug(
+    _ logMessage: Any?..., classPath: String = #file, functionName: String = #function,
+    lineNumber: Int = #line
+  ) {
         let fileName = URLUtil.getNameFromStringPath(classPath)
         if logLevel.rawValue <= LogLevel.DEBUG.rawValue {
             let log = OSLog(subsystem: SUBSYSTEM, category: "DEBUG 🐝🐝🐝🐝")
@@ -165,11 +183,10 @@ class Log {
         }
     }
     
-    
 }
 
 // MARK:- Helpers for Log class
-fileprivate struct URLUtil {
+private struct URLUtil {
     static func getNameFromStringPath(_ stringPath: String) -> String {
         //URL sees that "+" is a " "
         let stringPath = stringPath.replacingOccurrences(of: " ", with: "+")

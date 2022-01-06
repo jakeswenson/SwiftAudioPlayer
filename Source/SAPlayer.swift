@@ -23,13 +23,14 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import AVFoundation
+import Collections
+import Foundation
 
 public class SAPlayer {
     public var DEBUG_MODE: Bool = false {
         didSet {
-            if(DEBUG_MODE) {
+      if DEBUG_MODE {
                 logLevel = LogLevel.EXTERNAL_DEBUG
             } else {
                 logLevel = LogLevel.MONITOR
@@ -42,7 +43,7 @@ public class SAPlayer {
      */
     public static let shared: SAPlayer = SAPlayer()
     
-    private var presenter: SAPlayerPresenter!
+  private var presenter: SAPlayerPresenter
     private var player: AudioEngine?
     
     /**
@@ -60,18 +61,14 @@ public class SAPlayer {
      - Important: Changes to the engine are not safe guarded, thus unknown behaviour can arise from changing the engine. Just be wary and read [documentation of AVAudioEngine](https://developer.apple.com/documentation/avfoundation/avaudioengine) well when modifying,
     */
     public var engine: AVAudioEngine? {
-        get {
             return player?.engine
-        }
     }
     
     /**
     Unique ID for the current engine. This will be nil if no audio has been initialized which means no engine exists.
     */
     public var engineUID: String? {
-        get {
             return player?.key
-        }
     }
     
     /**
@@ -80,9 +77,7 @@ public class SAPlayer {
      - Important: Changes to the engine and this node are not safe guarded, thus unknown behaviour can arise from changing the engine or this node. Just be wary and read [documentation of AVAudioEngine](https://developer.apple.com/documentation/avfoundation/avaudioengine) well when modifying,
     */
     public var playerNode: AVAudioPlayerNode? {
-        get {
             return player?.playerNode
-        }
     }
     
     /**
@@ -182,7 +177,7 @@ public class SAPlayer {
     /**
      List of queued audio for playback. You can edit this list as you wish to modify the queue.
      */
-    public var audioQueued: [SAAudioQueueItem] {
+  public var audioQueued: Deque<SAAudioQueueItem> {
         get {
             return presenter.audioQueue
         }
@@ -197,38 +192,30 @@ public class SAPlayer {
      - Note: If you are streaming from a source that does not have an expected size at the beginning of a stream, such as live streams, this value will be constantly updating to best known value at the time.
      */
     public var duration: Double? {
-        get {
             return presenter.duration
-        }
     }
     
     /**
      A textual representation of the duration of the current audio initialized. Returns nil if no audio is initialized in player.
      */
     public var prettyDuration: String? {
-        get {
             guard let d = duration else { return nil }
             return SAPlayer.prettifyTimestamp(d)
-        }
     }
     
     /**
      Elapsed playback time of the current audio initialized. Returns nil if no audio is initialized in player.
      */
     public var elapsedTime: Double? {
-        get {
             return presenter.needle
-        }
     }
     
     /**
      A textual representation of the elapsed playback time of the current audio initialized. Returns nil if no audio is initialized in player.
      */
     public var prettyElapsedTime: String? {
-        get {
             guard let e = elapsedTime else { return nil }
             return SAPlayer.prettifyTimestamp(e)
-        }
     }
     
     /**
@@ -239,22 +226,25 @@ public class SAPlayer {
     public var mediaInfo: SALockScreenInfo? = nil
     
     private init() {
-        presenter = SAPlayerPresenter(delegate: self)
+    presenter = SAPlayerPresenter()
+    presenter.delegate = self
         
         // https://forums.developer.apple.com/thread/5874
         // https://forums.developer.apple.com/thread/6050
         // AVAudioTimePitchAlgorithm.timeDomain (just in case we want it)
         var componentDescription: AudioComponentDescription {
-            get {
                 var ret = AudioComponentDescription()
                 ret.componentType = kAudioUnitType_FormatConverter
                 ret.componentSubType = kAudioUnitSubType_AUiPodTimeOther
                 return ret
-            }
         }
         
         audioModifiers.append(AVAudioUnitTimePitch(audioComponentDescription: componentDescription))
-        NotificationCenter.default.addObserver(self, selector: #selector(handleInterruption), name: AVAudioSession.interruptionNotification, object: nil)
+    #if !os(macOS)
+      NotificationCenter.default.addObserver(
+        self, selector: #selector(handleInterruption),
+        name: AVAudioSession.interruptionNotification, object: nil)
+    #endif
     }
     
     /**
@@ -296,9 +286,11 @@ public class SAPlayer {
     }
     
     @objc func handleInterruption(notification: Notification) {
+    #if !os(macOS)
         guard let userInfo = notification.userInfo,
             let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
-            let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+        let type = AVAudioSession.InterruptionType(rawValue: typeValue)
+      else {
                 return
         }
 
@@ -312,7 +304,9 @@ public class SAPlayer {
         case .ended:
            // An interruption ended. Resume playback, if appropriate.
 
-            guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else { return }
+        guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else {
+          return
+        }
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
             if options.contains(.shouldResume) {
                 // An interruption ended. Resume playback.
@@ -323,6 +317,7 @@ public class SAPlayer {
 
         default: ()
         }
+    #endif
     }	
 }
 
@@ -483,7 +478,9 @@ extension SAPlayer {
      - Parameter bitrate: The bitrate of the streamed audio. By default the bitrate is set to high for streaming saved audio files. If you want to stream radios then you should use the `low` bitrate option.
      - Parameter mediaInfo: The media information of the audio to show on the lockscreen media player (optional).
      */
-    public func startRemoteAudio(withRemoteUrl url: URL, bitrate: SAPlayerBitrate = .high, mediaInfo: SALockScreenInfo? = nil) {
+  public func startRemoteAudio(
+    withRemoteUrl url: URL, bitrate: SAPlayerBitrate = .high, mediaInfo: SALockScreenInfo? = nil
+  ) {
         
         // Because we support queueing, we want to clear off any existing players.
         // Therefore, instantiate new player every time, destroy any existing ones.
@@ -509,7 +506,9 @@ extension SAPlayer {
      - Parameter bitrate: The bitrate of the streamed audio. By default the bitrate is set to high for streaming saved audio files. If you want to stream radios then you should use the `low` bitrate option.
      - Parameter mediaInfo: The media information of the audio to show on the lockscreen media player (optional).
      */
-    public func queueRemoteAudio(withRemoteUrl url: URL, bitrate: SAPlayerBitrate = .high, mediaInfo: SALockScreenInfo? = nil) {
+  public func queueRemoteAudio(
+    withRemoteUrl url: URL, bitrate: SAPlayerBitrate = .high, mediaInfo: SALockScreenInfo? = nil
+  ) {
         presenter.handleQueueStreamedAudio(withRemoteUrl: url, mediaInfo: mediaInfo, bitrate: bitrate)
     }
     
@@ -550,7 +549,6 @@ extension SAPlayer {
     }
 }
 
-
 //MARK: - Internal implementation of delegate
 extension SAPlayer: SAPlayerDelegate {
     internal func startAudioDownloaded(withSavedUrl url: AudioURL) {
@@ -574,18 +572,27 @@ extension SAPlayer: SAPlayerDelegate {
     }
     
     //Start taking control as the device's player
+  #if os(macOS)
+    private func becomeDeviceAudioPlayer() {}
+  #else
     private func becomeDeviceAudioPlayer() {
         do {
             if #available(iOS 11.0, tvOS 11.0, *) {
-                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, policy: .longFormAudio, options: [])
+          try AVAudioSession.sharedInstance().setCategory(
+            .playback, mode: .spokenAudio, policy: .longFormAudio, options: [])
             } else {
-                try AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.playback, mode: AVAudioSession.Mode(rawValue: convertFromAVAudioSessionMode(AVAudioSession.Mode.default)), options: .allowAirPlay)
+          try AVAudioSession.sharedInstance().setCategory(
+            AVAudioSession.Category.playback,
+            mode: AVAudioSession.Mode(
+              rawValue: AVAudioSession.Mode.default.rawValue),
+            options: .allowAirPlay)
             }
             try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
             Log.monitor("Problem setting up AVAudioSession to play in:: \(error.localizedDescription)")
         }
     }
+  #endif
     
     internal func pauseEngine() {
         player?.pause()
@@ -595,10 +602,4 @@ extension SAPlayer: SAPlayerDelegate {
         let seekToNeedle = needle < 0 ? 0 : needle
         player?.seek(toNeedle: seekToNeedle)
     }
-}
-
-
-// Helper function inserted by Swift 4.2 migrator.
-fileprivate func convertFromAVAudioSessionMode(_ input: AVAudioSession.Mode) -> String {
-	return input.rawValue
 }

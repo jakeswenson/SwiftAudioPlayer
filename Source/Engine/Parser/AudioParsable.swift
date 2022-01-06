@@ -29,8 +29,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import AVFoundation
+import Foundation
 
 protocol AudioParsable { //For the layer above us
     var fileAudioFormat: AVAudioFormat? {get}
@@ -48,9 +48,10 @@ extension AudioParsable { //For the layer above us
         return Duration(totalPredictedFrameCount)/Duration(sampleRate)
     }
     
-    
     var totalPredictedAudioFrameCount: AUAudioFrameCount? {
-        guard let framesPerPacket = fileAudioFormat?.streamDescription.pointee.mFramesPerPacket else {return nil }
+    guard let framesPerPacket = fileAudioFormat?.streamDescription.pointee.mFramesPerPacket else {
+      return nil
+    }
         return AVAudioFrameCount(totalPredictedPacketCount) * AVAudioFrameCount(framesPerPacket)
     }
 }

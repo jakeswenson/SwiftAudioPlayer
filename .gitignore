@@ -37,3 +37,8 @@ Carthage/Build
 # Pods/
 
 Pods/
+
+# Swift Package Manager: `swift build`
+.build/
+.swiftpm/
+Package.resolved

@@ -29,21 +29,33 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import AVFoundation
+import Foundation
 
 #if swift(>=5.3)
-func ParserPacketListener (_ context: UnsafeMutableRawPointer, _ byteCount: UInt32, _ packetCount: UInt32, _ streamData: UnsafeRawPointer, _ packetDescriptions: UnsafeMutablePointer<AudioStreamPacketDescription>?) {
+  func ParserPacketListener(
+    _ context: UnsafeMutableRawPointer, _ byteCount: UInt32, _ packetCount: UInt32,
+    _ streamData: UnsafeRawPointer,
+    _ packetDescriptions: UnsafeMutablePointer<AudioStreamPacketDescription>?
+  ) {
     parserPacket(context, byteCount, packetCount, streamData, packetDescriptions)
 }
 
 #else
-func ParserPacketListener (_ context: UnsafeMutableRawPointer, _ byteCount: UInt32, _ packetCount: UInt32, _ streamData: UnsafeRawPointer, _ packetDescriptions: UnsafeMutablePointer<AudioStreamPacketDescription>) {
+  func ParserPacketListener(
+    _ context: UnsafeMutableRawPointer, _ byteCount: UInt32, _ packetCount: UInt32,
+    _ streamData: UnsafeRawPointer,
+    _ packetDescriptions: UnsafeMutablePointer<AudioStreamPacketDescription>
+  ) {
     parserPacket(context, byteCount, packetCount, streamData, packetDescriptions)
 }
 #endif
 
-func parserPacket(_ context: UnsafeMutableRawPointer, _ byteCount: UInt32, _ packetCount: UInt32, _ streamData: UnsafeRawPointer, _ packetDescriptions: UnsafeMutablePointer<AudioStreamPacketDescription>?){
+func parserPacket(
+  _ context: UnsafeMutableRawPointer, _ byteCount: UInt32, _ packetCount: UInt32,
+  _ streamData: UnsafeRawPointer,
+  _ packetDescriptions: UnsafeMutablePointer<AudioStreamPacketDescription>?
+) {
     
     let selfAudioParser = Unmanaged<AudioParser>.fromOpaque(context).takeUnretainedValue()
     
@@ -64,7 +76,8 @@ func parserPacket(_ context: UnsafeMutableRawPointer, _ byteCount: UInt32, _ pac
             let audioPacketDescription = compressedPacketDescriptions[i]
             let audioPacketStart = Int(audioPacketDescription.mStartOffset)
             let audioPacketSize = Int(audioPacketDescription.mDataByteSize)
-            let audioPacketData = Data(bytes: streamData.advanced(by: audioPacketStart), count: audioPacketSize)
+      let audioPacketData = Data(
+        bytes: streamData.advanced(by: audioPacketStart), count: audioPacketSize)
             selfAudioParser.append(description: audioPacketDescription, data: audioPacketData)
         }
     } else { // not compressed audio (.wav)
@@ -74,7 +87,8 @@ func parserPacket(_ context: UnsafeMutableRawPointer, _ byteCount: UInt32, _ pac
         for i in 0 ..< Int(packetCount) {
             let audioPacketStart = i * bytesPerAudioPacket
             let audioPacketSize = bytesPerAudioPacket
-            let audioPacketData = Data(bytes: streamData.advanced(by: audioPacketStart), count: audioPacketSize)
+      let audioPacketData = Data(
+        bytes: streamData.advanced(by: audioPacketStart), count: audioPacketSize)
             selfAudioParser.append(description: nil, data: audioPacketData)
         }
     }

@@ -23,8 +23,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import Foundation
 import CoreMedia
+import Foundation
 
 protocol SAPlayerDelegate: AnyObject, LockScreenViewProtocol {
     var mediaInfo: SALockScreenInfo? { get set }

@@ -33,33 +33,23 @@ public struct SAAudioAvailabilityRange {
     let isPlayable: Bool
     
     public var bufferingProgress: Double {
-        get {
             return (startingNeedle + durationLoadedByNetwork) / predictedDurationToLoad
-        }
     }
     
     public var startingBufferTimePositon: Double {
-        get {
             return startingNeedle
-        }
     }
     
     public var totalDurationBuffered: Double {
-        get {
             return durationLoadedByNetwork
-        }
     }
     
     public var isReadyForPlaying: Bool {
-        get {
             return isPlayable
-        }
     }
     
     var secondsLeftToBuffer: Double {
-        get {
             return predictedDurationToLoad - (startingNeedle + durationLoadedByNetwork)
-        }
     }
     
     public func contains(_ needle: Double) -> Bool {
@@ -69,7 +59,7 @@ public struct SAAudioAvailabilityRange {
     public func reachedEndOfAudio(needle: Double) -> Bool {
         var needleAtEnd = false
         
-        if(totalDurationBuffered > 0 && needle > 0) {
+    if totalDurationBuffered > 0 && needle > 0 {
             needleAtEnd = needle >= totalDurationBuffered - 5
         }
         

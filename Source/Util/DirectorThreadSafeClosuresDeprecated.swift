@@ -29,19 +29,16 @@ enum DirectorError: Error {
     case closureIsDead
 }
 
-/**
- P for payload
- */
+/// P for payload
 class DirectorThreadSafeClosuresDeprecated<P>  {
     typealias TypeClosure = (Key, P) throws -> Void
-    private var queue: DispatchQueue = DispatchQueue(label: "SwiftAudioPlayer.thread_safe_map", attributes: .concurrent)
+  private var queue: DispatchQueue = DispatchQueue(
+    label: "SwiftAudioPlayer.thread_safe_map", attributes: .concurrent)
     private var closures: [UInt: TypeClosure] = [:]
     private var cache: [Key: P] = [:]
     
     var count: Int {
-        get {
             return closures.count
-        }
     }
     
     func broadcast(key: Key, payload: P) {

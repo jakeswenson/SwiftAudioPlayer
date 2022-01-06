@@ -37,7 +37,7 @@ extension Date {
         if #available(iOS 11.0, *) {
             return UInt(Date().timeIntervalSince1970.bitPattern)
         } else {
-            let time = Date().timeIntervalSince1970.bitPattern & 0xFFFFFFFF;
+      let time = Date().timeIntervalSince1970.bitPattern & 0xFFFF_FFFF
             return UInt(time)
         }
     }
