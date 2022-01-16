@@ -138,34 +138,36 @@ class AudioStreamEngine: AudioEngine {
     }
   }
 
-  init(withRemoteUrl url: AudioURL, delegate: AudioEngineDelegate?, bitrate: SAPlayerBitrate) {
+  init(withRemoteUrl url: AudioURL, delegate: AudioEngineDelegate?, bitrate: SAPlayerBitrate, audioModifiers: [AVAudioNode] = []) {
     Log.info(url)
     super.init(
-      url: url, delegate: delegate, engineAudioFormat: AudioEngine.defaultEngineAudioFormat)
+      url: url,
+      delegate: delegate,
+      engineAudioFormat: AudioEngine.defaultEngineAudioFormat,
+      audioModifiers: audioModifiers)
 
-    switch bitrate {
-    case .high:
-      PCM_BUFFER_SIZE = 8192
-    case .low:
-      PCM_BUFFER_SIZE = 4096
-    }
+    PCM_BUFFER_SIZE = bitrate.pcmBufferSize
 
     do {
       converter = try AudioConverter(
-        withRemoteUrl: url, toEngineAudioFormat: AudioEngine.defaultEngineAudioFormat,
+        withRemoteUrl: url,
+        toEngineAudioFormat: AudioEngine.defaultEngineAudioFormat,
         withPCMBufferSize: PCM_BUFFER_SIZE)
     } catch {
       delegate?.didError()
     }
 
-    StreamingDownloadDirector.shared.setKey(key)
-    StreamingDownloadDirector.shared.resetCache()
+    let director = StreamingDownloadDirector.shared
+    director.setKey(key)
+    Task {
+      director.resetCache()
 
-    streamChangeListenerId = StreamingDownloadDirector.shared.attach { [weak self] (progress) in
-      guard let self = self else { return }
+      streamChangeListenerId = await director.attach { [weak self] (progress) in
+        guard let self = self else { return }
 
-      // polling for buffers when we receive data. This won't be throttled on fresh new audio or seeked audio but in all other cases it most likely will be throttled
-      self.pollForNextBuffer()  //  no buffer updates because thread issues if I try to update buffer status in streaming listener
+        // polling for buffers when we receive data. This won't be throttled on fresh new audio or seeked audio but in all other cases it most likely will be throttled
+        self.pollForNextBuffer()  //  no buffer updates because thread issues if I try to update buffer status in streaming listener
+      }
     }
 
     let timeInterval = 1 / (converter.engineAudioFormat.sampleRate / Double(PCM_BUFFER_SIZE))

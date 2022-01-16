@@ -26,6 +26,7 @@
 import AVFoundation
 import Collections
 import Foundation
+import MediaPlayer
 
 public class SAPlayer {
   public var DEBUG_MODE: Bool = false {
@@ -54,6 +55,8 @@ public class SAPlayer {
       AudioDataManager.shared.setHTTPHeaderFields(HTTPHeaderFields)
     }
   }
+
+  var features: Features = Features()
 
   /**
     Access the engine of the player. Engine is nil if player has not been initialized with audio.
@@ -118,7 +121,8 @@ public class SAPlayer {
     */
   public var rate: Float? {
     get {
-      return (audioModifiers.first as? AVAudioUnitTimePitch)?.rate
+      guard let node = audioModifiers.first as? AVAudioUnitTimePitch else { return nil }
+      return node.rate
     }
 
     set {
@@ -285,8 +289,9 @@ public class SAPlayer {
     presenter.addUrlToKeyMap(url)
   }
 
+  #if !os(macOS)
   @objc func handleInterruption(notification: Notification) {
-    #if !os(macOS)
+
       guard let userInfo = notification.userInfo,
         let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
         let type = AVAudioSession.InterruptionType(rawValue: typeValue)
@@ -307,18 +312,20 @@ public class SAPlayer {
         guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else {
           return
         }
+
         let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
-        if options.contains(.shouldResume) {
-          // An interruption ended. Resume playback.
-          play()
-        } else {
-          // An interruption ended. Don't resume playback.
+        guard options.contains(.shouldResume) else {
+          // Do not resume playback
+          return
         }
 
-      default: ()
+        // An interruption ended. Resume playback.
+        play()
+
+        default: break;
       }
-    #endif
   }
+  #endif
 }
 
 public enum SAPlayerBitrate {
@@ -327,6 +334,15 @@ public enum SAPlayerBitrate {
 
   /// This bitrate is good for streaming saved audio files like podcasts where most of the audio data will be received from the remote server at the beginning in a short time. This rate is more performant by using much less CPU and being better for your battery-life and app performance.
   case high  // go for audio files being streamed. This is uses less CPU and
+}
+
+extension SAPlayerBitrate {
+  var pcmBufferSize: UInt32 {
+    switch self {
+      case .high: return 8192
+      case .low: return 4096
+    }
+  }
 }
 
 //MARK: - External Player Controls
@@ -556,7 +572,7 @@ extension SAPlayer: SAPlayerDelegate {
   }
 
   internal func startAudioStreamed(withRemoteUrl url: AudioURL, bitrate: SAPlayerBitrate) {
-    player = AudioStreamEngine(withRemoteUrl: url, delegate: presenter, bitrate: bitrate)
+    player = AudioStreamEngine(withRemoteUrl: url, delegate: presenter, bitrate: bitrate, audioModifiers: audioModifiers)
   }
 
   internal func clearEngine() {

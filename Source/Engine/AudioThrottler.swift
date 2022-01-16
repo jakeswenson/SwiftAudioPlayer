@@ -51,7 +51,6 @@ class AudioThrottler: AudioThrottleable {
   }
   private var lastSentDataPacketIndex = -1
 
-  var shouldThrottle = false
   var byteOffsetBecauseOfSeek: UInt = 0
 
   //This will be sent once at beginning of stream and every network seek
@@ -70,19 +69,19 @@ class AudioThrottler: AudioThrottleable {
     self.delegate = delegate
 
     AudioDataManager.shared.startStream(withRemoteURL: url) {
-      [weak self] (pto: StreamProgressPTO) in
+      [weak self] (dto: StreamProgress) in
       guard let self = self else { return }
       Log.debug(
-        "received stream data of size \(pto.getData().count) and progress: \(pto.getProgress())")
+        "received stream data of size \(dto.data.count) and progress: \(dto.progress)")
 
-      if let totalBytesExpected = pto.getTotalBytesExpected() {
+      if let totalBytesExpected = dto.totalBytesExpected {
         self.totalBytesExpected = totalBytesExpected
       }
 
       self.queue.async { [weak self] in
-        self?.networkData.append(pto.getData())
+        self?.networkData.append(dto.data)
         StreamingDownloadDirector.shared.didUpdate(
-          url.key, networkStreamProgress: pto.getProgress())
+          url.key, networkStreamProgress: dto.progress)
       }
     }
   }

@@ -8,20 +8,29 @@
 import AVFoundation
 import Foundation
 
+protocol PlayerFeature {}
+
 extension SAPlayer {
+
   /**
      Special features for audio manipulation. These are examples of manipulations you can do with the player outside of this library. This is just an aggregation of community contibuted ones.
 
      - Note: These features assume default state of the player and `audioModifiers` meaning some expect the first audio modifier to be the default `AVAudioUnitTimePitch` that comes with the SAPlayer.
      */
   public struct Features {
+    fileprivate var featureStatus: [ObjectIdentifier: Bool] = [:]
+
+    subscript<K>(key: K.Type) -> Bool where K: PlayerFeature {
+      get { featureStatus[ObjectIdentifier(key)] ?? false }
+      set { featureStatus[ObjectIdentifier(key)] = newValue }
+    }
 
     /**
          Feature to skip silences in spoken word audio. The player will speed up the rate of audio playback when silence is detected.
 
          - Important: The first audio modifier must be the default `AVAudioUnitTimePitch` that comes with the SAPlayer for this feature to work.
          */
-    public struct SkipSilences {
+    public struct SkipSilences: PlayerFeature {
 
       static var enabled: Bool = false
       static var originalRate: Float = 1.0
@@ -37,15 +46,13 @@ extension SAPlayer {
 
         Log.info("enabling skip silences feature")
         enabled = true
-        originalRate = SAPlayer.shared.rate ?? 1.0
+        originalRate = SAPlayer.shared.rate ?? originalRate
         let format = engine.mainMixerNode.outputFormat(forBus: 0)
 
-        // look at documentation here to get an understanding of what is happening here: https://www.raywenderlich.com/5154-avaudioengine-tutorial-for-ios-getting-started#toc-anchor-005
-        engine.mainMixerNode.installTap(onBus: 0, bufferSize: 1024, format: format) {
-          buffer, when in
-          guard let channelData = buffer.floatChannelData else {
-            return
-          }
+        // look at documentation here to get an understanding of what is happening here:
+        //   https://www.raywenderlich.com/5154-avaudioengine-tutorial-for-ios-getting-started#toc-anchor-005
+        engine.mainMixerNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, when in
+          guard let channelData = buffer.floatChannelData else { return }
 
           let channelDataValue = channelData.pointee
           let channelDataValueArray = stride(
@@ -55,18 +62,21 @@ extension SAPlayer {
           ).map { channelDataValue[$0] }
 
           let rms = sqrt(
-            channelDataValueArray.map { $0 * $0 }.reduce(0, +) / Float(buffer.frameLength))
+            channelDataValueArray.map { $0 * $0 }
+              .reduce(0, +) / Float(buffer.frameLength))
 
           let avgPower = 20 * log10(rms)
+
+          Log.debug("power db: \(avgPower)")
 
           let meterLevel = self.scaledPower(power: avgPower)
           Log.debug("meterLevel: \(meterLevel)")
           if meterLevel < 0.6 {  // below 0.6 decibels is below audible audio
-            SAPlayer.shared.rate = originalRate + 0.5
-            Log.debug("speed up rate to \(String(describing: SAPlayer.shared.rate))")
+            SAPlayer.shared.rate = originalRate + 0.9
+            Log.info("speed up rate to \(String(describing: SAPlayer.shared.rate))")
           } else {
             SAPlayer.shared.rate = originalRate
-            Log.debug("slow down rate to \(String(describing: SAPlayer.shared.rate))")
+            Log.info("slow down rate to \(String(describing: SAPlayer.shared.rate))")
           }
         }
 
@@ -152,12 +162,14 @@ extension SAPlayer {
 
         guard playingStatusId == nil else { return }
 
-        playingStatusId = SAPlayer.Updates.PlayingStatus.subscribe({ (status) in
-          if status == .ended && enabled {
-            SAPlayer.shared.seekTo(seconds: 0.0)
-            SAPlayer.shared.play()
-          }
-        })
+        Task {
+          playingStatusId = await SAPlayer.Updates.PlayingStatus.subscribe({ (status) in
+            if status == .ended && enabled {
+              SAPlayer.shared.seekTo(seconds: 0.0)
+              SAPlayer.shared.play()
+            }
+          })
+        }
       }
 
       /**

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 extension URL {
   var key: String {
@@ -14,12 +15,12 @@ extension URL {
 }
 
 extension String {
-  fileprivate var hashed: UInt64 {
-    var result = UInt64(8742)
-    let buf = [UInt8](self.utf8)
-    for b in buf {
-      result = 127 * (result & 0x00ff_ffff_ffff_ffff) + UInt64(b)
-    }
-    return result
+  fileprivate var hashed: String {
+    var sha = SHA256()
+    sha.update(data: self.data(using: Encoding.utf8)!)
+    let digest:SHA256.Digest = sha.finalize()
+    let hash = String(describing: digest)
+    Log.debug("Url Hash \(hash)")
+    return hash
   }
 }

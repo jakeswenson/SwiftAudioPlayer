@@ -42,7 +42,7 @@ protocol AudioDataManagable {
   //Director pattern
   func attach(callback: @escaping (_ id: ID, _ progress: Double) -> Void)
 
-  func startStream(withRemoteURL url: AudioURL, callback: @escaping (StreamProgressPTO) -> Void)  //called by throttler
+  func startStream(withRemoteURL url: AudioURL, callback: @escaping (StreamProgress) -> Void)  //called by throttler
   func pauseStream(withRemoteURL url: AudioURL)
   func resumeStream(withRemoteURL url: AudioURL)
   func seekStream(withRemoteURL url: AudioURL, toByteOffset offset: UInt64)
@@ -56,7 +56,7 @@ protocol AudioDataManagable {
 
 class AudioDataManager: AudioDataManagable {
   var allowCellular: Bool = true
-  var downloadDirectory: FileManager.SearchPathDirectory = .documentDirectory
+  var downloadDirectory: FileManager.SearchPathDirectory = .downloadsDirectory
 
   static let shared: AudioDataManagable = AudioDataManager()
 
@@ -72,7 +72,7 @@ class AudioDataManager: AudioDataManagable {
   private var downloadWorker: AudioDataDownloadable!
   private var streamWorker: AudioDataStreamable!
 
-  private var streamingCallbacks = [(ID, (StreamProgressPTO) -> ())]()
+  private var streamingCallbacks = [(id: ID, callback: (StreamProgress) -> ())]()
 
   private var originalDataCountForDownloadedAudio = 0
 
@@ -124,16 +124,16 @@ class AudioDataManager: AudioDataManagable {
 
 // MARK:- Streaming
 extension AudioDataManager {
-  func startStream(withRemoteURL url: AudioURL, callback: @escaping (StreamProgressPTO) -> Void) {
+  func startStream(withRemoteURL url: AudioURL, callback: @escaping (StreamProgress) -> Void) {
     if let data = FileStorage.Audio.read(url.key) {
-      let dto = StreamProgressDTO.init(
+      let dto = StreamProgress.init(
         progress: 1.0, data: data, totalBytesExpected: Int64(data.count))
-      callback(StreamProgressPTO(dto: dto))
+      callback(dto)
       return
     }
 
-    let exists = streamingCallbacks.contains { (cb: (ID, (StreamProgressPTO) -> Void)) -> Bool in
-      return cb.0 == url.key
+    let exists = streamingCallbacks.contains { (cb: (id: ID, (StreamProgress) -> Void)) -> Bool in
+      return cb.id == url.key
     }
 
     if !exists {
@@ -163,8 +163,8 @@ extension AudioDataManager {
 
   func deleteStream(withRemoteURL url: AudioURL) {
     streamWorker.stop(withId: url.key)
-    streamingCallbacks.removeAll { (cb: (ID, (StreamProgressPTO) -> Void)) -> Bool in
-      return cb.0 == url.key
+    streamingCallbacks.removeAll { (cb: (id: ID, (StreamProgress) -> Void)) -> Bool in
+      return cb.id == url.key
     }
   }
 }
@@ -214,10 +214,10 @@ extension AudioDataManager {
     globalDownloadProgressCallback(id, progress)
   }
 
-  private func streamProgressListener(id: ID, dto: StreamProgressDTO) {
+  private func streamProgressListener(id: ID, dto: StreamProgress) {
     for c in streamingCallbacks {
-      if c.0 == id {
-        c.1(StreamProgressPTO(dto: dto))
+      if c.id == id {
+        c.callback(dto)
       }
     }
   }

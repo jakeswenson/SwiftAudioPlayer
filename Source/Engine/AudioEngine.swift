@@ -116,47 +116,38 @@ class AudioEngine: AudioEngineProtocol {
 
   private var audioModifiers: [AVAudioUnit]?
 
-  init(url: AudioURL, delegate: AudioEngineDelegate?, engineAudioFormat: AVAudioFormat) {
+  init(url: AudioURL, delegate: AudioEngineDelegate?, engineAudioFormat: AVAudioFormat, audioModifiers: [AVAudioNode] = []) {
     self.key = url.key
     self.delegate = delegate
 
     engine = AVAudioEngine()
     playerNode = AVAudioPlayerNode()
 
-    initHelper(engineAudioFormat)
+    initHelper(engineAudioFormat, audioModifiers: audioModifiers)
   }
 
-  func initHelper(_ engineAudioFormat: AVAudioFormat) {
+  func initHelper(_ engineAudioFormat: AVAudioFormat, audioModifiers: [AVAudioNode]?) {
     engine.attach(playerNode)
-    audioModifiers = SAPlayer.shared.audioModifiers
 
     defer { engine.prepare() }
 
     guard let audioModifiers = audioModifiers, audioModifiers.count > 0 else {
-      engine.connect(playerNode, to: engine.mainMixerNode, format: engineAudioFormat)
+      engine.connect(playerNode, to: engine.outputNode, format: engineAudioFormat)
       return
     }
 
+    let mixerNode: AVAudioNode = engine.mainMixerNode
+
+    engine.connect(playerNode, to: mixerNode, format: engineAudioFormat)
+
     audioModifiers.forEach { engine.attach($0) }
 
-    var i = 0
-
-    let node = audioModifiers[i]
-    engine.connect(playerNode, to: node, format: engineAudioFormat)
-
-    i += 1
-
-    while i < audioModifiers.count {
-      let lastNode = audioModifiers[i - 1]
-      let currNode = audioModifiers[i]
-
-      engine.connect(lastNode, to: currNode, format: engineAudioFormat)
-      i += 1
+    let lastNode = audioModifiers.reduce(mixerNode) { lastNode, currentNode in
+      engine.connect(lastNode, to: currentNode, format: engineAudioFormat)
+      return currentNode
     }
 
-    let finalNode = audioModifiers[audioModifiers.count - 1]
-
-    engine.connect(finalNode, to: engine.mainMixerNode, format: engineAudioFormat)
+    engine.connect(lastNode, to: engine.outputNode, format: engineAudioFormat)
   }
 
   deinit {

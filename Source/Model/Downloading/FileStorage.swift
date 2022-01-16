@@ -37,8 +37,9 @@ struct FileStorage {
   static func getUrl(givenAName name: NameFile, inDirectory dir: FileManager.SearchPathDirectory)
     -> URL
   {
-    let directoryPath = NSSearchPathForDirectoriesInDomains(dir, .userDomainMask, true)[0] as String
-    let url = URL(fileURLWithPath: directoryPath)
+    // let directoryPath = NSSearchPathForDirectoriesInDomains(dir, .userDomainMask, true)[0] as String
+
+    let url = FileManager.default.urls(for: dir, in: .userDomainMask).first!
     return url.appendingPathComponent(name)
   }
 

@@ -85,7 +85,7 @@ class Log {
   /**
      Used when something catastrophic just happened. Like app about to crash, app state is inconsistent, or possible data corruption.
 
-     How to use: Log.error("this is error")
+     How to use: Log.monitor("this is error")
      Output: 13:51:38.487 MONITOR 🔥🔥🔥🔥 in InputNameViewController.swift:addContainerToVC():76:: data in corrupted state!
 
      To change the log level, visit the LogLevel enum
@@ -100,8 +100,8 @@ class Log {
     lineNumber: Int = #line
   ) {
     let fileName = URLUtil.getNameFromStringPath(classPath)
-    if logLevel.rawValue <= LogLevel.ERROR.rawValue {
-      let log = OSLog(subsystem: SUBSYSTEM, category: "ERROR 🔥🔥🔥🔥")
+    if logLevel.rawValue <= LogLevel.MONITOR.rawValue {
+      let log = OSLog(subsystem: SUBSYSTEM, category: "MONITOR 🔥🔥🔥🔥")
       os_log("%@:%@:%d:: %@", log: log, fileName, functionName, lineNumber, "\(logMessage)")
     }
   }
@@ -126,11 +126,6 @@ class Log {
     let fileName = URLUtil.getNameFromStringPath(classPath)
     if logLevel.rawValue <= LogLevel.WARN.rawValue {
       let log = OSLog(subsystem: SUBSYSTEM, category: "WARN  ⚠️⚠️⚠️⚠️")
-      os_log("%@:%@:%d:: %@", log: log, fileName, functionName, lineNumber, "\(logMessage)")
-    }
-
-    if logLevel.rawValue <= LogLevel.EXTERNAL_DEBUG.rawValue {
-      let log = OSLog(subsystem: SUBSYSTEM, category: "DEBUG")
       os_log("%@:%@:%d:: %@", log: log, fileName, functionName, lineNumber, "\(logMessage)")
     }
   }

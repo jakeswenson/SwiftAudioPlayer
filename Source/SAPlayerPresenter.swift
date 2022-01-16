@@ -45,43 +45,50 @@ class SAPlayerPresenter {
   var playingStatusRef: UInt = 0
   var audioQueue: Deque<SAAudioQueueItem> = []
 
-  init() {
-    durationRef = AudioClockDirector.shared.attachToChangesInDuration(closure: {
-      [weak self] (duration) in
-      guard let self = self else { throw DirectorError.closureIsDead }
+  convenience init() {
+    self.init(clockDirector: AudioClockDirector.shared)
+  }
 
-      self.delegate?.updateLockScreenPlaybackDuration(duration: duration)
-      self.duration = duration
+  init(clockDirector: AudioClockDirector) {
+    Task {
+      durationRef = await clockDirector.attachToChangesInDuration(closure: {
+        [weak self] (duration) in
+        guard let self = self else { throw DirectorError.closureIsDead }
 
-      self.delegate?.setLockScreenInfo(withMediaInfo: self.delegate?.mediaInfo, duration: duration)
-    })
+        self.delegate?.updateLockScreenPlaybackDuration(duration: duration)
+        self.duration = duration
 
-    needleRef = AudioClockDirector.shared.attachToChangesInNeedle(closure: { [weak self] (needle) in
-      guard let self = self else { throw DirectorError.closureIsDead }
+        self.delegate?.setLockScreenInfo(withMediaInfo: self.delegate?.mediaInfo, duration: duration)
+      })
 
-      self.needle = needle
-      self.delegate?.updateLockScreenElapsedTime(needle: needle)
-    })
+      needleRef = await clockDirector.attachToChangesInNeedle(closure: { [weak self] (needle) in
+        guard let self = self else { throw DirectorError.closureIsDead }
 
-    playingStatusRef = AudioClockDirector.shared.attachToChangesInPlayingStatus(closure: {
-      [weak self] (isPlaying) in
-      guard let self = self else { throw DirectorError.closureIsDead }
+        self.needle = needle
+        self.delegate?.updateLockScreenElapsedTime(needle: needle)
+      })
 
-      if isPlaying == .paused && self.shouldPlayImmediately {
-        self.shouldPlayImmediately = false
-        self.handlePlay()
-      }
+      playingStatusRef = await clockDirector.attachToChangesInPlayingStatus(closure: {
+        [weak self] (isPlaying) in
+        guard let self = self else { throw DirectorError.closureIsDead }
 
-      // solves bug nil == owningEngine || GetEngine() == owningEngine where too many
-      // ended statuses were notified to cause 2 engines to be initialized and causes an error.
-      // TODO don't need guard
-      guard isPlaying != self.isPlaying else { return }
-      self.isPlaying = isPlaying
+        if isPlaying == .paused && self.shouldPlayImmediately {
+          self.shouldPlayImmediately = false
+          self.handlePlay()
+        }
 
-      if self.isPlaying == .ended {
-        self.playNextAudioIfExists()
-      }
-    })
+        // solves bug nil == owningEngine || GetEngine() == owningEngine where too many
+        // ended statuses were notified to cause 2 engines to be initialized and causes an error.
+        // TODO don't need guard
+        guard isPlaying != self.isPlaying else { return }
+        self.isPlaying = isPlaying
+
+        if self.isPlaying == .ended {
+          self.playNextAudioIfExists()
+        }
+      })
+
+    }
   }
 
   func getUrl(forKey key: Key) -> URL? {

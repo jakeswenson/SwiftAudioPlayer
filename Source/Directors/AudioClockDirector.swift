@@ -53,10 +53,12 @@ class AudioClockDirector {
   }
 
   func resetCache() {
-    needleClosures.resetCache()
-    durationClosures.resetCache()
-    playingStatusClosures.resetCache()
-    bufferClosures.resetCache()
+    Task {
+      await needleClosures.resetCache()
+      await durationClosures.resetCache()
+      await playingStatusClosures.resetCache()
+      await bufferClosures.resetCache()
+    }
   }
 
   func clear() {
@@ -65,36 +67,24 @@ class AudioClockDirector {
     depPlayingStatusClosures.clear()
     depBufferClosures.clear()
 
-    needleClosures.clear()
-    durationClosures.clear()
-    playingStatusClosures.clear()
-    bufferClosures.clear()
+    Task {
+      await needleClosures.clear()
+      await durationClosures.clear()
+      await playingStatusClosures.clear()
+      await bufferClosures.clear()
+    }
   }
 
   // MARK: - Attaches
 
   // Needle
-  @available(
-    *, deprecated, message: "Use subscribe without key in the closure for current audio updates"
-  )
-  func attachToChangesInNeedle(closure: @escaping (Key, Needle) throws -> Void) -> UInt {
-    return depNeedleClosures.attach(closure: closure)
-  }
-
-  func attachToChangesInNeedle(closure: @escaping (Needle) throws -> Void) -> UInt {
-    return needleClosures.attach(closure: closure)
+  func attachToChangesInNeedle(closure: @escaping (Needle) throws -> Void) async -> UInt {
+    return await needleClosures.attach(closure: closure)
   }
 
   // Duration
-  @available(
-    *, deprecated, message: "Use subscribe without key in the closure for current audio updates"
-  )
-  func attachToChangesInDuration(closure: @escaping (Key, Duration) throws -> Void) -> UInt {
-    return depDurationClosures.attach(closure: closure)
-  }
-
-  func attachToChangesInDuration(closure: @escaping (Duration) throws -> Void) -> UInt {
-    return durationClosures.attach(closure: closure)
+  func attachToChangesInDuration(closure: @escaping (Duration) throws -> Void) async -> UInt {
+    return await durationClosures.attach(closure: closure)
   }
 
   // Playing status
@@ -107,8 +97,8 @@ class AudioClockDirector {
     return depPlayingStatusClosures.attach(closure: closure)
   }
 
-  func attachToChangesInPlayingStatus(closure: @escaping (SAPlayingStatus) throws -> Void) -> UInt {
-    return playingStatusClosures.attach(closure: closure)
+  func attachToChangesInPlayingStatus(closure: @escaping (SAPlayingStatus) throws -> Void) async -> UInt {
+    return await playingStatusClosures.attach(closure: closure)
   }
 
   // Buffer
@@ -122,30 +112,30 @@ class AudioClockDirector {
   }
 
   func attachToChangesInBufferedRange(closure: @escaping (SAAudioAvailabilityRange) throws -> Void)
-    -> UInt
+    async -> UInt
   {
-    return bufferClosures.attach(closure: closure)
+    return await bufferClosures.attach(closure: closure)
   }
 
   // MARK: - Detaches
   func detachFromChangesInNeedle(withID id: UInt) {
     depNeedleClosures.detach(id: id)
-    needleClosures.detach(id: id)
+    Task { await needleClosures.detach(id: id) }
   }
 
   func detachFromChangesInDuration(withID id: UInt) {
     depDurationClosures.detach(id: id)
-    durationClosures.detach(id: id)
+    Task { await durationClosures.detach(id: id) }
   }
 
   func detachFromChangesInPlayingStatus(withID id: UInt) {
     depPlayingStatusClosures.detach(id: id)
-    playingStatusClosures.detach(id: id)
+    Task { await playingStatusClosures.detach(id: id) }
   }
 
   func detachFromChangesInBufferedRange(withID id: UInt) {
     depBufferClosures.detach(id: id)
-    bufferClosures.detach(id: id)
+    Task { await bufferClosures.detach(id: id) }
   }
 }
 
@@ -157,7 +147,7 @@ extension AudioClockDirector {
       return
     }
     depNeedleClosures.broadcast(key: key, payload: needle)
-    needleClosures.broadcast(payload: needle)
+    Task { await needleClosures.broadcast(payload: needle) }
   }
 }
 
@@ -168,7 +158,7 @@ extension AudioClockDirector {
       return
     }
     depDurationClosures.broadcast(key: key, payload: duration)
-    durationClosures.broadcast(payload: duration)
+    Task { await durationClosures.broadcast(payload: duration) }
   }
 }
 
@@ -179,7 +169,7 @@ extension AudioClockDirector {
       return
     }
     depPlayingStatusClosures.broadcast(key: key, payload: status)
-    playingStatusClosures.broadcast(payload: status)
+    Task { await playingStatusClosures.broadcast(payload: status) }
   }
 }
 
@@ -190,6 +180,6 @@ extension AudioClockDirector {
       return
     }
     depBufferClosures.broadcast(key: key, payload: buffered)
-    bufferClosures.broadcast(payload: buffered)
+    Task { await bufferClosures.broadcast(payload: buffered) }
   }
 }

@@ -15,18 +15,24 @@ class AudioQueueDirector {
   func create() {}
 
   func clear() {
-    closures.clear()
+    Task {
+      await closures.clear()
+    }
   }
 
-  func attach(closure: @escaping (URL) throws -> Void) -> UInt {
-    return closures.attach(closure: closure)
+  func attach(closure: @escaping (URL) throws -> Void) async -> UInt {
+    return await closures.attach(closure: closure)
   }
 
   func detach(withID id: UInt) {
-    closures.detach(id: id)
+    Task {
+      await closures.detach(id: id)
+    }
   }
 
   func changeInQueue(url: URL) {
-    closures.broadcast(payload: url)
+    Task {
+      await closures.broadcast(payload: url)
+    }
   }
 }

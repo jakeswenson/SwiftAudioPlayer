@@ -37,19 +37,19 @@ class StreamingDownloadDirector {
   }
 
   func resetCache() {
-    closures.resetCache()
+    Task { await closures.resetCache() }
   }
 
   func clear() {
-    closures.clear()
+    Task { await closures.clear() }
   }
 
-  func attach(closure: @escaping (Double) throws -> Void) -> UInt {
-    return closures.attach(closure: closure)
+  func attach(closure: @escaping (Double) throws -> Void) async -> UInt {
+    return await closures.attach(closure: closure)
   }
 
   func detach(withID id: UInt) {
-    closures.detach(id: id)
+    Task { await closures.detach(id: id) }
   }
 }
 
@@ -60,6 +60,8 @@ extension StreamingDownloadDirector {
       return
     }
 
-    closures.broadcast(payload: networkStreamProgress)
+    Task {
+      await closures.broadcast(payload: networkStreamProgress)
+    }
   }
 }

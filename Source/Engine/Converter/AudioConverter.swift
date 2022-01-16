@@ -89,7 +89,8 @@ class AudioConverter: AudioConvertable {
 
     do {
       parser = try AudioParser(
-        withRemoteUrl: url, bufferSize: Int(size),
+        withRemoteUrl: url,
+        bufferSize: Int(size),
         parsedFileAudioFormatCallback: {
           [weak self] (fileAudioFormat: AVAudioFormat) in
           guard let strongSelf = self else { return }

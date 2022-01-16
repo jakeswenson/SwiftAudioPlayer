@@ -6,10 +6,11 @@
 //
 
 import Foundation
+import Collections
 
 // wrapper for array of urls
 struct AudioQueue<T> {
-  private var audioUrls: [T] = []
+  private var audioUrls: Deque<T> = []
 
   var isQueueEmpty: Bool {
     return audioUrls.isEmpty

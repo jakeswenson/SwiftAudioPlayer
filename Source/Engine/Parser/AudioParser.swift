@@ -31,6 +31,8 @@
 
 import AVFoundation
 import Foundation
+import Atomics
+
 
 /// DEFINITIONS
 ///
@@ -74,7 +76,7 @@ class AudioParser: AudioParsable {
 
   //Our use
   var expectedFileSizeInBytes: UInt64?
-  var networkProgress: Double = 0
+  var networkProgress: ManagedAtomic<Double> = ManagedAtomic(0)
   var parsedFileAudioFormatCallback: (AVAudioFormat) -> Void
   var indexSeekOffset: AVAudioPacketCount = 0
   var shouldPreventPacketFromFillingUp = false
@@ -94,7 +96,7 @@ class AudioParser: AudioParsable {
 
     let predictedCount = AVAudioPacketCount(Double(sizeOfFileInBytes) / bytesPerPacket)
 
-    guard networkProgress != 1.0 else {
+    guard networkProgress.load(ordering: .sequentiallyConsistent) != 1.0 else {
       return max(AVAudioPacketCount(audioPackets.count), predictedCount)
     }
 
@@ -156,18 +158,21 @@ class AudioParser: AudioParsable {
 
     self.throttler = AudioThrottler(withRemoteUrl: url, withDelegate: self)
 
-    streamChangeListenerId = StreamingDownloadDirector.shared.attach { [weak self] (progress) in
-      guard let self = self else { return }
-      self.networkProgress = progress
+    Task {
+      let downloadDirector = StreamingDownloadDirector.shared
+      streamChangeListenerId = await downloadDirector.attach { [weak self] (progress) in
+        guard let self = self else { return }
+        self.networkProgress.store(progress, ordering: .sequentiallyConsistent)
 
-      // initially parse a bunch of packets
-      self.lockQueue.sync {
-        if self.fileAudioFormat == nil {
-          self.processNextDataPacket()
-        } else if self.audioPackets.count - self.lastSentAudioPacketIndex
-          < self.MIN_PACKETS_TO_HAVE_AVAILABLE_BEFORE_THROTTLING_PARSING
-        {
-          self.processNextDataPacket()
+        // initially parse a bunch of packets
+        self.lockQueue.sync {
+          if self.fileAudioFormat == nil {
+            self.processNextDataPacket()
+          } else if self.audioPackets.count - self.lastSentAudioPacketIndex
+                      < self.MIN_PACKETS_TO_HAVE_AVAILABLE_BEFORE_THROTTLING_PARSING
+          {
+            self.processNextDataPacket()
+          }
         }
       }
     }

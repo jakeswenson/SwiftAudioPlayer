@@ -42,7 +42,7 @@ import Foundation
 protocol AudioDataStreamable {
   //if user taps download then starts to stream
   init(
-    progressCallback: @escaping (_ id: ID, _ dto: StreamProgressDTO) -> Void,
+    progressCallback: @escaping (_ id: ID, _ dto: StreamProgress) -> Void,
     doneCallback: @escaping (_ id: ID, _ error: Error?) -> Bool)  //Bool is should save or not
 
   var HTTPHeaderFields: [String: String]? { get set }
@@ -64,7 +64,7 @@ protocol AudioDataStreamable {
 class AudioStreamWorker: NSObject, AudioDataStreamable {
   private let TIMEOUT = 60.0
 
-  fileprivate let progressCallback: (_ id: ID, _ dto: StreamProgressDTO) -> Void
+  fileprivate let progressCallback: (_ id: ID, _ dto: StreamProgress) -> Void
   //Will ony be called when the task object will no longer be active
   //Why? So upper layer knows that current streaming activity for this ID is done
   //Why? To know if we should persist the stream data assuming successful completion
@@ -89,7 +89,7 @@ class AudioStreamWorker: NSObject, AudioDataStreamable {
   ///   - progressCallback: generic callback
   ///   - doneCallback: when finished
   required init(
-    progressCallback: @escaping (_ id: ID, _ dto: StreamProgressDTO) -> Void,
+    progressCallback: @escaping (_ id: ID, _ dto: StreamProgress) -> Void,
     doneCallback: @escaping (_ id: ID, _ error: Error?) -> Bool
   ) {
     self.progressCallback = progressCallback
@@ -131,7 +131,7 @@ class AudioStreamWorker: NSObject, AudioDataStreamable {
         previousTotalBytesExpected != nil
         ? Double(initialDataBytesCount) / Double(previousTotalBytesExpected!) : 0
 
-      let dto = StreamProgressDTO(
+      let dto = StreamProgress(
         progress: progress, data: data, totalBytesExpected: totalBytesExpectedForWholeFile)
 
       progressCallback(id, dto)
@@ -233,7 +233,7 @@ class AudioStreamWorker: NSObject, AudioDataStreamable {
     corruptedBecauseOfSeek = true
     self.progressCallback(
       id,
-      StreamProgressDTO(
+      StreamProgress(
         progress: 0, data: Data(), totalBytesExpected: totalBytesExpectedForWholeFile))
 
     var request = URLRequest(
@@ -283,7 +283,7 @@ extension AudioStreamWorker: URLSessionDataDelegate {
 
     Log.debug("network streaming progress \(progress)")
     self.progressCallback(
-      id, StreamProgressDTO(progress: progress, data: data, totalBytesExpected: totalBytesExpected))
+      id, StreamProgress(progress: progress, data: data, totalBytesExpected: totalBytesExpected))
   }
 
   func urlSession(

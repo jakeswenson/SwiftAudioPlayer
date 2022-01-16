@@ -26,12 +26,11 @@
 import Foundation
 
 /// P for payload
-class DirectorThreadSafeClosures<P> {
+actor DirectorThreadSafeClosures<P> {
   typealias TypeClosure = (P) throws -> Void
-  private var queue: DispatchQueue = DispatchQueue(
-    label: "SwiftAudioPlayer.thread_safe_map", attributes: .concurrent)
   private var closures: [UInt: TypeClosure] = [:]
   private var cache: P? = nil
+  private var counter: UInt = 0
 
   var count: Int {
     return closures.count
@@ -42,22 +41,21 @@ class DirectorThreadSafeClosures<P> {
   }
 
   func broadcast(payload: P) {
-    queue.sync {
-      self.cache = payload
-      var iterator = self.closures.makeIterator()
-      while let element = iterator.next() {
-        do {
-          try element.value(payload)
-        } catch {
-          helperRemove(withKey: element.key)
-        }
+    self.cache = payload
+    var iterator = self.closures.makeIterator()
+    while let element = iterator.next() {
+      do {
+        try element.value(payload)
+      } catch {
+        helperRemove(withKey: element.key)
       }
     }
   }
 
   //UInt is actually 64-bits on modern devices
   func attach(closure: @escaping TypeClosure) -> UInt {
-    let id: UInt = Date.getUTC64()
+    counter+=1
+    let id: UInt = counter
 
     //The director may not yet have the status yet. We should only call the closure if we have it
     //Let the caller know the immediate value. If it's dead already then stop
@@ -80,21 +78,15 @@ class DirectorThreadSafeClosures<P> {
   }
 
   func clear() {
-    queue.async(flags: .barrier) {
-      self.closures.removeAll()
-      self.cache = nil
-    }
+    self.closures.removeAll()
+    self.cache = nil
   }
 
   private func helperRemove(withKey key: UInt) {
-    queue.async(flags: .barrier) {
-      self.closures[key] = nil
-    }
+    self.closures.removeValue(forKey: key)
   }
 
   private func helperInsert(withKey key: UInt, closure: @escaping TypeClosure) {
-    queue.async(flags: .barrier) {
-      self.closures[key] = closure
-    }
+    self.closures[key] = closure
   }
 }

@@ -37,28 +37,6 @@ extension SAPlayer {
          */
     public struct ElapsedTime {
 
-      /**
-             Subscribe to updates in elapsed time of the playing audio. Aka, the current timestamp of the audio.
-
-             - Note: It's recommended to have a weak reference to a class that uses this function
-
-             - Parameter closure: The closure that will receive the updates of the changes in time.
-             - Parameter url: The corresponding remote URL for the updated playing time.
-             - Parameter timePosition: The current time within the audio that is playing.
-             - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
-             */
-      @available(
-        *, deprecated,
-        message: "Use subscribe without the url in the closure for current audio updates"
-      )
-      public static func subscribe(
-        _ closure: @escaping (_ url: URL, _ timePosition: Double) -> Void
-      ) -> UInt {
-        return AudioClockDirector.shared.attachToChangesInNeedle(closure: { (key, needle) in
-          guard let url = SAPlayer.shared.getUrl(forKey: key) else { return }
-          closure(url, needle)
-        })
-      }
 
       /**
              Subscribe to updates in elapsed time of the playing audio. Aka, the current timestamp of the audio.
@@ -69,8 +47,8 @@ extension SAPlayer {
              - Parameter timePosition: The current time within the audio that is playing.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-      public static func subscribe(_ closure: @escaping (_ timePosition: Double) -> Void) -> UInt {
-        AudioClockDirector.shared.attachToChangesInNeedle(closure: closure)
+      public static func subscribe(_ closure: @escaping (_ timePosition: Double) -> Void) async -> UInt {
+        await AudioClockDirector.shared.attachToChangesInNeedle(closure: closure)
       }
 
       /**
@@ -89,32 +67,6 @@ extension SAPlayer {
          - Note: If you are streaming from a source that does not have an expected size at the beginning of a stream, such as live streams, duration will be constantly updating to best known value at the time (which is the seconds buffered currently and not necessarily the actual total duration of audio).
          */
     public struct Duration {
-
-      /**
-             Subscribe to updates to changes in duration of the current audio initialized.
-
-             - Note: If you are streaming from a source that does not have an expected size at the beginning of a stream, such as live streams, duration will be constantly updating to best known value at the time (which is the seconds buffered currently and not necessarily the actual total duration of audio).
-
-             - Note: It's recommended to have a weak reference to a class that uses this function
-
-             - Parameter closure: The closure that will receive the updates of the changes in duration.
-             - Parameter url: The corresponding remote URL for the updated duration.
-             - Parameter duration: The duration of the current initialized audio.
-             - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
-             */
-      @available(
-        *, deprecated,
-        message: "Use subscribe without the url in the closure for current audio updates"
-      )
-      public static func subscribe(_ closure: @escaping (_ url: URL, _ duration: Double) -> Void)
-        -> UInt
-      {
-        return AudioClockDirector.shared.attachToChangesInDuration(closure: { (key, duration) in
-          guard let url = SAPlayer.shared.getUrl(forKey: key) else { return }
-          closure(url, duration)
-        })
-      }
-
       /**
              Subscribe to updates to changes in duration of the current audio initialized.
 
@@ -126,8 +78,8 @@ extension SAPlayer {
              - Parameter duration: The duration of the current initialized audio.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-      public static func subscribe(_ closure: @escaping (_ duration: Double) -> Void) -> UInt {
-        return AudioClockDirector.shared.attachToChangesInDuration(closure: closure)
+      public static func subscribe(_ closure: @escaping (_ duration: Double) -> Void) async -> UInt {
+        return await AudioClockDirector.shared.attachToChangesInDuration(closure: closure)
       }
 
       /**
@@ -179,9 +131,9 @@ extension SAPlayer {
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
       public static func subscribe(_ closure: @escaping (_ playingStatus: SAPlayingStatus) -> Void)
-        -> UInt
+        async -> UInt
       {
-        return AudioClockDirector.shared.attachToChangesInPlayingStatus(closure: closure)
+        return await AudioClockDirector.shared.attachToChangesInPlayingStatus(closure: closure)
       }
 
       /**
@@ -237,8 +189,8 @@ extension SAPlayer {
              */
       public static func subscribe(
         _ closure: @escaping (_ buffer: SAAudioAvailabilityRange) -> Void
-      ) -> UInt {
-        return AudioClockDirector.shared.attachToChangesInBufferedRange(closure: closure)
+      ) async -> UInt {
+        return await AudioClockDirector.shared.attachToChangesInBufferedRange(closure: closure)
       }
 
       /**
@@ -294,8 +246,8 @@ extension SAPlayer {
              - Parameter url: The corresponding remote URL for the forthcoming audio file.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-      public static func subscribe(_ closure: @escaping (_ newUrl: URL) -> Void) -> UInt {
-        return AudioQueueDirector.shared.attach(closure: closure)
+      public static func subscribe(_ closure: @escaping (_ newUrl: URL) -> Void) async -> UInt {
+        return await AudioQueueDirector.shared.attach(closure: closure)
       }
 
       /**

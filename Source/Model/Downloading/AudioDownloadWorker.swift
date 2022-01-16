@@ -27,7 +27,8 @@ import Foundation
 
 protocol AudioDataDownloadable: AnyObject {
   init(
-    allowCellular: Bool, progressCallback: @escaping (_ id: ID, _ progress: Double) -> Void,
+    allowCellular: Bool,
+    progressCallback: @escaping (_ id: ID, _ progress: Double) -> Void,
     doneCallback: @escaping (_ id: ID, _ error: Error?) -> Void,
     backgroundDownloadCallback: @escaping () -> Void)
 
@@ -39,13 +40,14 @@ protocol AudioDataDownloadable: AnyObject {
   func getProgressOfDownload(withID id: ID) -> Double?
 
   func start(
-    withID id: ID, withRemoteUrl remoteUrl: URL, completion: @escaping (URL, Error?) -> Void)
+    withID id: ID,
+    withRemoteUrl remoteUrl: URL,
+    completion: @escaping (URL, Error?) -> Void)
   func stop(withID id: ID, callback: ((_ dataSoFar: Data?, _ totalBytesExpected: Int64?) -> Void)?)
   func pauseAllActive()  //Because of streaming
   func resumeAllActive()  //Because of streaming
 }
 
-@available(macOS 11.0, *)
 class AudioDownloadWorker: NSObject, AudioDataDownloadable {
   private let MAX_CONCURRENT_DOWNLOADS = 3
 
@@ -333,7 +335,8 @@ extension AudioDownloadWorker {
 
   private class ActiveDownload: Hashable {
     static func == (
-      lhs: AudioDownloadWorker.ActiveDownload, rhs: AudioDownloadWorker.ActiveDownload
+      lhs: AudioDownloadWorker.ActiveDownload,
+      rhs: AudioDownloadWorker.ActiveDownload
     ) -> Bool {
       return lhs.info.id == rhs.info.id
     }
