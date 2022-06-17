@@ -24,6 +24,8 @@
 //  THE SOFTWARE.
 
 import Foundation
+import Combine
+import Collections
 
 extension SAPlayer {
 
@@ -47,18 +49,11 @@ extension SAPlayer {
              - Parameter timePosition: The current time within the audio that is playing.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-      public static func subscribe(_ closure: @escaping (_ timePosition: Double) -> Void) async -> UInt {
-        await AudioClockDirector.shared.attachToChangesInNeedle(closure: closure)
-      }
-
       /**
              Stop recieving updates of changes in elapsed time of audio.
 
              - Parameter id: The closure with this id will stop receiving updates.
              */
-      public static func unsubscribe(_ id: UInt) {
-        AudioClockDirector.shared.detachFromChangesInNeedle(withID: id)
-      }
     }
 
     /**
@@ -78,49 +73,17 @@ extension SAPlayer {
              - Parameter duration: The duration of the current initialized audio.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-      public static func subscribe(_ closure: @escaping (_ duration: Double) -> Void) async -> UInt {
-        return await AudioClockDirector.shared.attachToChangesInDuration(closure: closure)
-      }
-
       /**
              Stop recieving updates of changes in duration of the current initialized audio.
 
              - Parameter id: The closure with this id will stop receiving updates.
              */
-      public static func unsubscribe(_ id: UInt) {
-        AudioClockDirector.shared.detachFromChangesInDuration(withID: id)
-      }
     }
 
     /**
          Updates to changes in the playing/paused status of the player.
          */
     public struct PlayingStatus {
-
-      /**
-             Subscribe to updates to changes in the playing/paused status of audio.
-
-             - Note: It's recommended to have a weak reference to a class that uses this function
-
-             - Parameter closure: The closure that will receive the updates of the changes in duration.
-             - Parameter url: The corresponding remote URL for the updated duration.
-             - Parameter playingStatus: Whether the player is playing audio or paused.
-             - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
-             */
-      @available(
-        *, deprecated,
-        message: "Use subscribe without the url in the closure for current audio updates"
-      )
-      public static func subscribe(
-        _ closure: @escaping (_ url: URL, _ playingStatus: SAPlayingStatus) -> Void
-      ) -> UInt {
-        return AudioClockDirector.shared.attachToChangesInPlayingStatus(closure: {
-          (key, isPlaying) in
-          guard let url = SAPlayer.shared.getUrl(forKey: key) else { return }
-          closure(url, isPlaying)
-        })
-      }
-
       /**
              Subscribe to updates to changes in the playing/paused status of audio.
 
@@ -130,52 +93,17 @@ extension SAPlayer {
              - Parameter playingStatus: Whether the player is playing audio or paused.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-      public static func subscribe(_ closure: @escaping (_ playingStatus: SAPlayingStatus) -> Void)
-        async -> UInt
-      {
-        return await AudioClockDirector.shared.attachToChangesInPlayingStatus(closure: closure)
-      }
-
       /**
              Stop recieving updates of changes in the playing/paused status of audio.
 
              - Parameter id: The closure with this id will stop receiving updates.
              */
-      public static func unsubscribe(_ id: UInt) {
-        AudioClockDirector.shared.detachFromChangesInPlayingStatus(withID: id)
-      }
     }
 
     /**
          Updates to changes in the progress of downloading audio for streaming. Information about range of audio available and if the audio is playable. Look at `SAAudioAvailabilityRange` for more information.
          */
     public struct StreamingBuffer {
-
-      /**
-             Subscribe to updates to changes in the progress of downloading audio for streaming. Information about range of audio available and if the audio is playable. Look at SAAudioAvailabilityRange for more information. For progress of downloading audio that saves to the phone for playback later, look at AudioDownloading instead.
-
-             - Note: For live streams that don't have an expected audio length from the beginning of the stream; the duration is constantly changing and equal to the total seconds buffered from the SAAudioAvailabilityRange.
-
-             - Note: It's recommended to have a weak reference to a class that uses this function
-
-             - Parameter closure: The closure that will receive the updates of the changes in duration.
-             - Parameter url: The corresponding remote URL for the updated streaming progress.
-             - Parameter buffer: Availabity of audio that has been downloaded to play.
-             - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
-             */
-      @available(
-        *, deprecated,
-        message: "Use subscribe without the url in the closure for current audio updates"
-      )
-      public static func subscribe(
-        _ closure: @escaping (_ url: URL, _ buffer: SAAudioAvailabilityRange) -> Void
-      ) -> UInt {
-        return AudioClockDirector.shared.attachToChangesInBufferedRange(closure: { (key, buffer) in
-          guard let url = SAPlayer.shared.getUrl(forKey: key) else { return }
-          closure(url, buffer)
-        })
-      }
-
       /**
              Subscribe to updates to changes in the progress of downloading audio for streaming. Information about range of audio available and if the audio is playable. Look at SAAudioAvailabilityRange for more information. For progress of downloading audio that saves to the phone for playback later, look at AudioDownloading instead.
 
@@ -187,20 +115,12 @@ extension SAPlayer {
              - Parameter buffer: Availabity of audio that has been downloaded to play.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-      public static func subscribe(
-        _ closure: @escaping (_ buffer: SAAudioAvailabilityRange) -> Void
-      ) async -> UInt {
-        return await AudioClockDirector.shared.attachToChangesInBufferedRange(closure: closure)
-      }
 
       /**
              Stop recieving updates of changes in streaming progress.
 
              - Parameter id: The closure with this id will stop receiving updates.
              */
-      public static func unsubscribe(_ id: UInt) {
-        AudioClockDirector.shared.detachFromChangesInBufferedRange(withID: id)
-      }
     }
 
     /**
@@ -218,23 +138,13 @@ extension SAPlayer {
              - Parameter progress: Value from 0.0 to 1.0 indicating progress of download.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-      public static func subscribe(_ closure: @escaping (_ url: URL, _ progress: Double) -> Void)
-        -> UInt
-      {
-        return DownloadProgressDirector.shared.attach(closure: { (key, progress) in
-          guard let url = SAPlayer.shared.getUrl(forKey: key) else { return }
-          closure(url, progress)
-        })
-      }
+
 
       /**
              Stop recieving updates of changes in download progress.
 
              - Parameter id: The closure with this id will stop receiving updates.
              */
-      public static func unsubscribe(_ id: UInt) {
-        DownloadProgressDirector.shared.detach(withID: id)
-      }
     }
 
     public struct AudioQueue {
@@ -246,17 +156,11 @@ extension SAPlayer {
              - Parameter url: The corresponding remote URL for the forthcoming audio file.
              - Returns: the id for the subscription in the case you would like to unsubscribe to updates for the closure.
              */
-      public static func subscribe(_ closure: @escaping (_ newUrl: URL) -> Void) async -> UInt {
-        return await AudioQueueDirector.shared.attach(closure: closure)
-      }
 
       /**
              Stop recieving updates of changes in download progress.
              - Parameter id: The closure with this id will stop receiving updates.
              */
-      public static func unsubscribe(_ id: UInt) {
-        AudioQueueDirector.shared.detach(withID: id)
-      }
     }
   }
 }

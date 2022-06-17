@@ -35,17 +35,20 @@ protocol AudioDataDownloadable: AnyObject {
   var numberOfActive: Int { get }
   var numberOfQueued: Int { get }
 
-  var HTTPHeaderFields: [String: String]? { get set }
+  var httpRequestHeaders: [String: String]? { get set }
 
   func getProgressOfDownload(withID id: ID) -> Double?
 
   func start(
     withID id: ID,
-    withRemoteUrl remoteUrl: URL,
-    completion: @escaping (URL, Error?) -> Void)
+    withRemoteUrl remoteUrl: URL) async throws -> URL
   func stop(withID id: ID, callback: ((_ dataSoFar: Data?, _ totalBytesExpected: Int64?) -> Void)?)
   func pauseAllActive()  //Because of streaming
   func resumeAllActive()  //Because of streaming
+}
+
+enum DownloadWorkerError: Error {
+  case duplicate
 }
 
 class AudioDownloadWorker: NSObject, AudioDataDownloadable {
@@ -68,7 +71,7 @@ class AudioDownloadWorker: NSObject, AudioDataDownloadable {
     return URLSession(configuration: config, delegate: self, delegateQueue: nil)
   }()
 
-  var HTTPHeaderFields: [String: String]?
+  var httpRequestHeaders: [String: String]?
 
   private var activeDownloads: [ActiveDownload] = []
   private var queuedDownloads = Set<DownloadInfo>()
@@ -101,20 +104,30 @@ class AudioDownloadWorker: NSObject, AudioDataDownloadable {
   }
 
   func start(
-    withID id: ID, withRemoteUrl remoteUrl: URL, completion: @escaping (URL, Error?) -> Void
-  ) {
+    withID id: ID, withRemoteUrl remoteUrl: URL
+  ) async throws -> URL {
     Log.info(
       "startExternal paramID: \(id) activeDownloadIDs: \((activeDownloads.map { $0.info.id } ).toLog)"
     )
     let temp = activeDownloads.filter { $0.info.id == id }.count
     guard temp == 0 else {
-      return
+      throw DownloadWorkerError.duplicate
     }
 
-    let info = queuedDownloads.updatePreservingOldCompletionHandlers(
-      withID: id, withRemoteUrl: remoteUrl, completion: completion)
+    return try await withCheckedThrowingContinuation { cont in
 
-    start(withInfo: info)
+      let info = queuedDownloads.updatePreservingOldCompletionHandlers(
+        withID: id, withRemoteUrl: remoteUrl) { result, error in
+          if let error = error {
+            cont.resume(throwing: error)
+          } else {
+            cont.resume(returning: result)
+          }
+        }
+
+
+      start(withInfo: info)
+    }
   }
 
   fileprivate func start(withInfo info: DownloadInfo) {
@@ -134,7 +147,7 @@ class AudioDownloadWorker: NSObject, AudioDataDownloadable {
     queuedDownloads.remove(info)
 
     var request = URLRequest(url: info.remoteUrl)
-    HTTPHeaderFields?.forEach { request.setValue($1, forHTTPHeaderField: $0) }
+    httpRequestHeaders?.forEach { request.setValue($1, forHTTPHeaderField: $0) }
 
     let task: URLSessionDownloadTask = session.downloadTask(with: request)
     task.taskDescription = info.id

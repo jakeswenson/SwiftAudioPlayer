@@ -47,7 +47,7 @@ class AudioDiskEngine: AudioEngine {
 
   var audioLengthSeconds: Float = 0
 
-  init(withSavedUrl url: AudioURL, delegate: AudioEngineDelegate?) {
+  init(withSavedUrl url: AudioURL, delegate: AudioEngineDelegate?, updates: AudioUpdates) {
     Log.info(url.key)
 
     do {
@@ -58,7 +58,8 @@ class AudioDiskEngine: AudioEngine {
 
     super.init(
       url: url, delegate: delegate,
-      engineAudioFormat: audioFile?.processingFormat ?? AudioEngine.defaultEngineAudioFormat)
+      engineAudioFormat: audioFile?.processingFormat ?? AudioEngine.defaultEngineAudioFormat,
+      updates: updates)
 
     if let file = audioFile {
       Log.debug("Audio file exists")

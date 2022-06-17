@@ -57,6 +57,8 @@ public class SAPlayer {
   }
 
   var features: Features = Features()
+  public let updates: AudioUpdates = AudioUpdates()
+  public let downloader: Downloader = Downloader()
 
   /**
     Access the engine of the player. Engine is nil if player has not been initialized with audio.
@@ -230,7 +232,7 @@ public class SAPlayer {
   public var mediaInfo: SALockScreenInfo? = nil
 
   private init() {
-    presenter = SAPlayerPresenter()
+    presenter = SAPlayerPresenter(updates)
     presenter.delegate = self
 
     // https://forums.developer.apple.com/thread/5874
@@ -568,11 +570,11 @@ extension SAPlayer {
 //MARK: - Internal implementation of delegate
 extension SAPlayer: SAPlayerDelegate {
   internal func startAudioDownloaded(withSavedUrl url: AudioURL) {
-    player = AudioDiskEngine(withSavedUrl: url, delegate: presenter)
+    player = AudioDiskEngine(withSavedUrl: url, delegate: presenter, updates: updates)
   }
 
   internal func startAudioStreamed(withRemoteUrl url: AudioURL, bitrate: SAPlayerBitrate) {
-    player = AudioStreamEngine(withRemoteUrl: url, delegate: presenter, bitrate: bitrate, audioModifiers: audioModifiers)
+    player = AudioStreamEngine(withRemoteUrl: url, delegate: presenter, bitrate: bitrate, updates: updates, audioModifiers: audioModifiers)
   }
 
   internal func clearEngine() {

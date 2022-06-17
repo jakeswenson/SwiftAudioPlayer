@@ -49,7 +49,7 @@ protocol AudioDataManagable {
   func deleteStream(withRemoteURL url: AudioURL)
 
   func getPersistedUrl(withRemoteURL url: AudioURL) -> URL?
-  func startDownload(withRemoteURL url: AudioURL, completion: @escaping (URL, Error?) -> Void)
+  func startDownload(withRemoteURL url: AudioURL) async throws -> URL
   func cancelDownload(withRemoteURL url: AudioURL)
   func deleteDownload(withLocalURL url: URL)
 }
@@ -102,7 +102,7 @@ class AudioDataManager: AudioDataManagable {
 
   func setHTTPHeaderFields(_ fields: [String: String]?) {
     streamWorker.HTTPHeaderFields = fields
-    downloadWorker.HTTPHeaderFields = fields
+    downloadWorker.httpRequestHeaders = fields
   }
 
   func setBackgroundCompletionHandler(_ completionHandler: @escaping () -> Void) {
@@ -171,31 +171,36 @@ extension AudioDataManager {
 
 // MARK:- Download
 extension AudioDataManager {
+  public enum DownloadError: Error {
+    case alreadyInprogress
+    case currentlyStreaming
+    case error(Error)
+  }
+
   func getPersistedUrl(withRemoteURL url: AudioURL) -> URL? {
     return FileStorage.Audio.locate(url.key)
   }
 
-  func startDownload(withRemoteURL url: AudioURL, completion: @escaping (URL, Error?) -> Void) {
+  func startDownload(withRemoteURL url: AudioURL) async throws -> URL {
     let key = url.key
 
     if let savedUrl = FileStorage.Audio.locate(key), FileStorage.Audio.isStored(key) {
       globalDownloadProgressCallback(key, 1.0)
-      completion(savedUrl, nil)
-      return
+      return savedUrl
     }
 
     if let currentProgress = downloadWorker.getProgressOfDownload(withID: key) {
       globalDownloadProgressCallback(key, currentProgress)
-      return
+      throw DownloadError.alreadyInprogress
     }
 
     // TODO: check if we already streaming and convert streaming to download when we have persistent play button
     guard streamWorker.getRunningID() != key else {
       Log.debug("already streaming audio, don't need to download key: \(key)")
-      return
+      throw DownloadError.currentlyStreaming
     }
 
-    downloadWorker.start(withID: key, withRemoteUrl: url, completion: completion)
+    return try await downloadWorker.start(withID: key, withRemoteUrl: url)
   }
 
   func cancelDownload(withRemoteURL url: AudioURL) {

@@ -46,6 +46,7 @@ class AudioEngine: AudioEngineProtocol {
   var engine: AVAudioEngine!
   var playerNode: AVAudioPlayerNode!
   private var engineInvalidated: Bool = false
+  private var updates: AudioUpdates
 
   static let defaultEngineAudioFormat: AVAudioFormat = AVAudioFormat(
     commonFormat: .pcmFormatFloat32, sampleRate: 44100, channels: 2, interleaved: false)!
@@ -59,7 +60,7 @@ class AudioEngine: AudioEngineProtocol {
   var needle: Needle = -1 {
     didSet {
       if needle >= 0 && oldValue != needle {
-        AudioClockDirector.shared.needleTick(key, needle: needle)
+        updates.elapsedTime.send(needle)
       }
     }
   }
@@ -67,7 +68,8 @@ class AudioEngine: AudioEngineProtocol {
   var duration: Duration = -1 {
     didSet {
       if duration >= 0 && oldValue != duration {
-        AudioClockDirector.shared.durationWasChanged(key, duration: duration)
+        updates.duration.send(duration)
+//        AudioClockDirector.shared.durationWasChanged(key, duration: duration)
       }
     }
   }
@@ -78,7 +80,7 @@ class AudioEngine: AudioEngineProtocol {
         return
       }
 
-      AudioClockDirector.shared.audioPlayingStatusWasChanged(key, status: status)
+      updates.playingStatus.send(status)
     }
   }
 
@@ -92,7 +94,8 @@ class AudioEngine: AudioEngineProtocol {
     didSet {
       if bufferedSeconds.startingNeedle == 0.0 && bufferedSeconds.durationLoadedByNetwork == 0.0 {
         bufferedSecondsDebouncer = bufferedSeconds
-        AudioClockDirector.shared.changeInAudioBuffered(key, buffered: bufferedSeconds)
+
+        updates.streamingBuffer.send(bufferedSeconds)
         return
       }
 
@@ -110,18 +113,24 @@ class AudioEngine: AudioEngineProtocol {
       }
 
       bufferedSecondsDebouncer = bufferedSeconds
-      AudioClockDirector.shared.changeInAudioBuffered(key, buffered: bufferedSeconds)
+
+      updates.streamingBuffer.send(bufferedSeconds)
     }
   }
 
   private var audioModifiers: [AVAudioUnit]?
 
-  init(url: AudioURL, delegate: AudioEngineDelegate?, engineAudioFormat: AVAudioFormat, audioModifiers: [AVAudioNode] = []) {
+  init(url: AudioURL,
+       delegate: AudioEngineDelegate?,
+       engineAudioFormat: AVAudioFormat,
+       updates: AudioUpdates,
+       audioModifiers: [AVAudioNode] = []) {
     self.key = url.key
     self.delegate = delegate
 
     engine = AVAudioEngine()
     playerNode = AVAudioPlayerNode()
+    self.updates = updates
 
     initHelper(engineAudioFormat, audioModifiers: audioModifiers)
   }

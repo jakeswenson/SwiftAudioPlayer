@@ -25,7 +25,7 @@
 
 import Foundation
 
-typealias Needle = Double
+public typealias Needle = Double
 typealias Duration = Double
 typealias Key = String
 typealias AudioURL = URL

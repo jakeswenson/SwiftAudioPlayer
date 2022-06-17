@@ -30,7 +30,7 @@ protocol AudioThrottleDelegate: AnyObject {
 }
 
 protocol AudioThrottleable {
-  init(withRemoteUrl url: AudioURL, withDelegate delegate: AudioThrottleDelegate)
+  init(withRemoteUrl url: AudioURL, updates: AudioUpdates, withDelegate delegate: AudioThrottleDelegate)
   func pullNextDataPacket(_ callback: @escaping (Data?) -> Void)
   func tellSeek(offset: UInt64)
   func pollRangeOfBytesAvailable() -> (UInt64, UInt64)
@@ -64,7 +64,7 @@ class AudioThrottler: AudioThrottleable {
 
   var largestPollingOffsetDifference: UInt64 = 1
 
-  required init(withRemoteUrl url: AudioURL, withDelegate delegate: AudioThrottleDelegate) {
+  required init(withRemoteUrl url: AudioURL, updates: AudioUpdates, withDelegate delegate: AudioThrottleDelegate) {
     self.url = url
     self.delegate = delegate
 
@@ -80,8 +80,7 @@ class AudioThrottler: AudioThrottleable {
 
       self.queue.async { [weak self] in
         self?.networkData.append(dto.data)
-        StreamingDownloadDirector.shared.didUpdate(
-          url.key, networkStreamProgress: dto.progress)
+        updates.streamingDownloadProgress.send((url: url, progress: dto.progress))
       }
     }
   }
@@ -154,8 +153,9 @@ class AudioThrottler: AudioThrottleable {
 
 extension Array where Element == Data {
   var sum: Int {
-    guard count > 0 else { return 0 }
-    return self.reduce(0) { $0 + $1.count }
+    let array = self
+    guard array.count > 0 else { return 0 }
+    return array.reduce(0) { $0 + $1.count }
   }
 
   func getIndexContainingByteOffset(_ offset: Int) -> Int? {

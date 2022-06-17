@@ -34,6 +34,8 @@ extension SAPlayer {
      - Important: Please ensure that you have passed in the background download completion handler in the AppDelegate with `setBackgroundCompletionHandler` to allow for downloading audio while app is in the background.
      */
   public struct Downloader {
+    private let dataManager: AudioDataManagable =  AudioDataManager.shared
+
     /**
          Download audio from a remote url. Will save the audio on the device for playback later.
 
@@ -47,17 +49,9 @@ extension SAPlayer {
          - Parameter completion: Completion handler that will return once the download is successful and complete.
          - Parameter savedUrl: The url of where the audio was saved locally on the device. Will receive once download has completed.
          */
-    public static func downloadAudio(withRemoteUrl url: URL) async throws -> URL {
+    public func downloadAudio(withRemoteUrl url: URL) async throws -> URL {
       SAPlayer.shared.addUrlToMapping(url: url)
-      return try await withCheckedThrowingContinuation { cont in
-        AudioDataManager.shared.startDownload(withRemoteURL: url) { localUrl, err in
-          if let error = err {
-            cont.resume(throwing: error)
-          } else {
-            cont.resume(returning: localUrl)
-          }
-        }
-      }
+      return try await self.dataManager.startDownload(withRemoteURL: url)
     }
 
     /**
@@ -65,8 +59,8 @@ extension SAPlayer {
 
          - Parameter url: The remote url corresponding to the active download you want to cancel.
          */
-    public static func cancelDownload(withRemoteUrl url: URL) {
-      AudioDataManager.shared.cancelDownload(withRemoteURL: url)
+    public func cancelDownload(withRemoteUrl url: URL) {
+      self.dataManager.cancelDownload(withRemoteURL: url)
     }
 
     /**
@@ -76,8 +70,8 @@ extension SAPlayer {
 
          - Parameter url: The url of the audio to delete from the device.
          */
-    public static func deleteDownloaded(withSavedUrl url: URL) {
-      AudioDataManager.shared.deleteDownload(withLocalURL: url)
+    public func deleteDownloaded(withSavedUrl url: URL) {
+      dataManager.deleteDownload(withLocalURL: url)
     }
 
     /**
@@ -86,8 +80,8 @@ extension SAPlayer {
          - Parameter url: The remote url corresponding to the audio file you want to see if downloaded.
          - Returns: Whether of not file at remote url is downloaded on device.
          */
-    public static func isDownloaded(withRemoteUrl url: URL) -> Bool {
-      return AudioDataManager.shared.getPersistedUrl(withRemoteURL: url) != nil
+    public func isDownloaded(withRemoteUrl url: URL) -> Bool {
+      return dataManager.getPersistedUrl(withRemoteURL: url) != nil
     }
 
     /**
@@ -96,8 +90,8 @@ extension SAPlayer {
          - Parameter url: The remote url corresponding to the audio file you want the device url of.
          - Returns: Url of audio file on device if it exists.
          */
-    public static func getSavedUrl(forRemoteUrl url: URL) -> URL? {
-      return AudioDataManager.shared.getPersistedUrl(withRemoteURL: url)
+    public func getSavedUrl(forRemoteUrl url: URL) -> URL? {
+      return dataManager.getPersistedUrl(withRemoteURL: url)
     }
 
     /**
@@ -105,25 +99,25 @@ extension SAPlayer {
 
          - Parameter completionHandler: The completion hander from `AppDelegate` to use for app in the background downloads.
          */
-    public static func setBackgroundCompletionHandler(_ completionHandler: @escaping () -> Void) {
-      AudioDataManager.shared.setBackgroundCompletionHandler(completionHandler)
+    public func setBackgroundCompletionHandler(_ completionHandler: @escaping () -> Void) {
+      dataManager.setBackgroundCompletionHandler(completionHandler)
     }
 
     /**
          Whether downloading audio on cellular data is allowed. By default this is set to `true`.
          */
-    public static var allowUsingCellularData = true {
+    public var allowUsingCellularData = true {
       didSet {
-        AudioDataManager.shared.setAllowCellularDownloadPreference(allowUsingCellularData)
+        dataManager.setAllowCellularDownloadPreference(allowUsingCellularData)
       }
     }
 
     /**
          EXPERIMENTAL!
          */
-    public static var downloadDirectory: FileManager.SearchPathDirectory = .documentDirectory {
+    public var downloadDirectory: FileManager.SearchPathDirectory = .downloadsDirectory {
       didSet {
-        AudioDataManager.shared.setDownloadDirectory(downloadDirectory)
+        dataManager.setDownloadDirectory(downloadDirectory)
       }
     }
   }

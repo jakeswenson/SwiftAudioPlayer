@@ -7,178 +7,218 @@
 
 import AVFoundation
 import Foundation
+import Combine
 
-protocol PlayerFeature {}
+protocol PlayerFeature: AnyObject {
+  init()
+}
 
 extension SAPlayer {
 
   /**
-     Special features for audio manipulation. These are examples of manipulations you can do with the player outside of this library. This is just an aggregation of community contibuted ones.
+   Special features for audio manipulation. These are examples of manipulations you can do with the player outside of this library. This is just an aggregation of community contibuted ones.
 
-     - Note: These features assume default state of the player and `audioModifiers` meaning some expect the first audio modifier to be the default `AVAudioUnitTimePitch` that comes with the SAPlayer.
-     */
-  public struct Features {
-    fileprivate var featureStatus: [ObjectIdentifier: Bool] = [:]
+   - Note: These features assume default state of the player and `audioModifiers` meaning some expect the first audio modifier to be the default `AVAudioUnitTimePitch` that comes with the SAPlayer.
+   */
+  public class Features {
+    private var featureState: [ObjectIdentifier: PlayerFeature] = [:]
 
-    subscript<K>(key: K.Type) -> Bool where K: PlayerFeature {
-      get { featureStatus[ObjectIdentifier(key)] ?? false }
-      set { featureStatus[ObjectIdentifier(key)] = newValue }
-    }
+    subscript<K>(key: K.Type) -> K where K: PlayerFeature {
+      get {
+        let key = ObjectIdentifier(key)
 
-    /**
-         Feature to skip silences in spoken word audio. The player will speed up the rate of audio playback when silence is detected.
-
-         - Important: The first audio modifier must be the default `AVAudioUnitTimePitch` that comes with the SAPlayer for this feature to work.
-         */
-    public struct SkipSilences: PlayerFeature {
-
-      static var enabled: Bool = false
-      static var originalRate: Float = 1.0
-
-      /**
-             Enable feature to skip silences in spoken word audio. The player will speed up the rate of audio playback when silence is detected. This can be called at any point of audio playback.
-
-             - Precondition: The first audio modifier must be the default `AVAudioUnitTimePitch` that comes with the SAPlayer for this feature to work.
-             - Important: If you want to change the rate of the overall player while having skip silences on, please use `SAPlayer.Features.SkipSilences.setRateSafely()` to properly set the rate of the player. Any rate changes to the player will be ignored while using Skip Silences otherwise.
-             */
-      public static func enable() -> Bool {
-        guard let engine = SAPlayer.shared.engine else { return false }
-
-        Log.info("enabling skip silences feature")
-        enabled = true
-        originalRate = SAPlayer.shared.rate ?? originalRate
-        let format = engine.mainMixerNode.outputFormat(forBus: 0)
-
-        // look at documentation here to get an understanding of what is happening here:
-        //   https://www.raywenderlich.com/5154-avaudioengine-tutorial-for-ios-getting-started#toc-anchor-005
-        engine.mainMixerNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, when in
-          guard let channelData = buffer.floatChannelData else { return }
-
-          let channelDataValue = channelData.pointee
-          let channelDataValueArray = stride(
-            from: 0,
-            to: Int(buffer.frameLength),
-            by: buffer.stride
-          ).map { channelDataValue[$0] }
-
-          let rms = sqrt(
-            channelDataValueArray.map { $0 * $0 }
-              .reduce(0, +) / Float(buffer.frameLength))
-
-          let avgPower = 20 * log10(rms)
-
-          Log.debug("power db: \(avgPower)")
-
-          let meterLevel = self.scaledPower(power: avgPower)
-          Log.debug("meterLevel: \(meterLevel)")
-          if meterLevel < 0.6 {  // below 0.6 decibels is below audible audio
-            SAPlayer.shared.rate = originalRate + 0.9
-            Log.info("speed up rate to \(String(describing: SAPlayer.shared.rate))")
-          } else {
-            SAPlayer.shared.rate = originalRate
-            Log.info("slow down rate to \(String(describing: SAPlayer.shared.rate))")
-          }
+        guard let feature = featureState[key] else {
+          let state = K.init()
+          featureState[key] = state
+          return state
         }
 
-        return true
+        return feature as! K
       }
+      set { featureState[ObjectIdentifier(key)] = newValue }
+    }
+  }
+}
 
-      /**
-             Disable feature to skip silences in spoken word audio. The player will speed up the rate of audio playback when silence is detected. This can be called at any point of audio playback.
 
-             - Precondition: The first audio modifier must be the default `AVAudioUnitTimePitch` that comes with the SAPlayer for this feature to work.
-             */
-      public static func disable() -> Bool {
-        guard let engine = SAPlayer.shared.engine else { return false }
-        Log.info("disabling skip silences feature")
-        engine.mainMixerNode.removeTap(onBus: 0)
-        SAPlayer.shared.rate = originalRate
-        enabled = false
-        return true
-      }
+/**
+ Feature to skip silences in spoken word audio. The player will speed up the rate of audio playback when silence is detected.
 
-      /**
-             Use this function to set the overall rate of the player for when skip silences is on. This ensures that the overall rate will be what is set through this function even as skip silences is on; if this function is not used then any changes asked of from the overall player while skip silences is on won't be recorded!
+ - Important: The first audio modifier must be the default `AVAudioUnitTimePitch` that comes with the SAPlayer for this feature to work.
+ */
+public class SkipSilences: PlayerFeature {
 
-             - Important: The first audio modifier must be the default `AVAudioUnitTimePitch` that comes with the SAPlayer for this feature to work.
-             */
-      public static func setRateSafely(_ rate: Float) {
-        originalRate = rate
-        SAPlayer.shared.rate = rate
-      }
+  var enabled: Bool = false
+  var originalRate: Float = 1.0
 
-      private static func scaledPower(power: Float) -> Float {
-        guard power.isFinite else { return 0.0 }
-        let minDb: Float = -80.0
-        if power < minDb {
-          return 0.0
-        } else if power >= 1.0 {
-          return 1.0
-        } else {
-          return (abs(minDb) - abs(power)) / abs(minDb)
-        }
+  required init() {
+
+  }
+}
+
+extension SAPlayer {
+
+  /**
+   Enable feature to skip silences in spoken word audio. The player will speed up the rate of audio playback when silence is detected. This can be called at any point of audio playback.
+
+   - Precondition: The first audio modifier must be the default `AVAudioUnitTimePitch` that comes with the SAPlayer for this feature to work.
+   - Important: If you want to change the rate of the overall player while having skip silences on, please use `SAPlayer.Features.SkipSilences.setRateSafely()` to properly set the rate of the player. Any rate changes to the player will be ignored while using Skip Silences otherwise.
+   */
+  @discardableResult
+  public func skipSilences() -> Bool {
+    let feature = self.features[SkipSilences.self]
+    guard let engine = self.engine else { return false }
+
+    feature.enabled = true
+    feature.originalRate = self.rate ?? feature.originalRate
+
+    Log.info("enabling skip silences feature")
+
+    let format = engine.mainMixerNode.outputFormat(forBus: 0)
+
+    // look at documentation here to get an understanding of what is happening here:
+    //   https://www.raywenderlich.com/5154-avaudioengine-tutorial-for-ios-getting-started#toc-anchor-005
+    engine.mainMixerNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, when in
+      guard let channelData = buffer.floatChannelData else { return }
+
+      let channelDataValue = channelData.pointee
+      let channelDataValueArray = stride(
+        from: 0,
+        to: Int(buffer.frameLength),
+        by: buffer.stride
+      ).map { channelDataValue[$0] }
+
+      let rms = sqrt(
+        channelDataValueArray.map { $0 * $0 }
+          .reduce(0, +) / Float(buffer.frameLength))
+
+      let avgPower = 20 * log10(rms)
+
+      Log.debug("power db: \(avgPower)")
+
+      let meterLevel = Self.scaledPower(power: avgPower)
+      Log.debug("meterLevel: \(meterLevel)")
+      if meterLevel < 0.6 {  // below 0.6 decibels is below audible audio
+        self.rate = feature.originalRate + 0.9
+        Log.info("speed up rate to \(String(describing: SAPlayer.shared.rate))")
+      } else {
+        self.rate = feature.originalRate
+        Log.info("slow down rate to \(String(describing: SAPlayer.shared.rate))")
       }
     }
 
-    /**
-         Feature to pause the player after a delay. This will happen regardless of if another audio clip has started.
-         */
-    public struct SleepTimer {
-      static var timer: Timer?
+    return true
+  }
 
-      /**
-             Enable feature to pause the player after a delay. This will happen regardless of if another audio clip has started.
+  /**
+   Disable feature to skip silences in spoken word audio. The player will speed up the rate of audio playback when silence is detected. This can be called at any point of audio playback.
 
-             - Parameter afterDelay: The number of seconds to wait before pausing the audio
-             */
-      public static func enable(afterDelay delay: Double) {
-        timer = Timer.scheduledTimer(
-          withTimeInterval: delay, repeats: false,
-          block: { _ in
-            SAPlayer.shared.pause()
-          })
-      }
+   - Precondition: The first audio modifier must be the default `AVAudioUnitTimePitch` that comes with the SAPlayer for this feature to work.
+   */
+  public func disableSkipSilences() -> Bool {
+    let feature = self.features[SkipSilences.self]
+    guard let engine = self.engine else { return false }
+    Log.info("disabling skip silences feature")
+    engine.mainMixerNode.removeTap(onBus: 0)
+    self.rate = feature.originalRate
+    feature.enabled = false
+    return true
+  }
 
-      /**
-             Disable feature to pause the player after a delay.
-             */
-      public static func disable() {
-        timer?.invalidate()
+  /**
+   Use this function to set the overall rate of the player for when skip silences is on. This ensures that the overall rate will be what is set through this function even as skip silences is on; if this function is not used then any changes asked of from the overall player while skip silences is on won't be recorded!
+
+   - Important: The first audio modifier must be the default `AVAudioUnitTimePitch` that comes with the SAPlayer for this feature to work.
+   */
+  public func setRateSafely(_ rate: Float) {
+    let feature = self.features[SkipSilences.self]
+    feature.originalRate = rate
+    self.rate = rate
+  }
+
+  private static func scaledPower(power: Float) -> Float {
+    guard power.isFinite else { return 0.0 }
+    let minDb: Float = -80.0
+    if power < minDb {
+      return 0.0
+    } else if power >= 1.0 {
+      return 1.0
+    } else {
+      return (abs(minDb) - abs(power)) / abs(minDb)
+    }
+  }
+}
+
+/**
+ Feature to play the current playing audio on repeat until feature is disabled.
+ */
+public class Loop: PlayerFeature {
+  var enabled: Bool = false
+  var playingStatusId: AnyCancellable? = nil
+  required init() {
+  }
+}
+
+
+extension SAPlayer {
+  /**
+   Enable feature to play the current playing audio on loop. This will continue until the feature is disabled. And this feature works for both remote and saved audio.
+   */
+  public func loop() {
+    let feature = self.features[Loop.self]
+    feature.enabled = true
+
+    guard feature.playingStatusId == nil else { return }
+
+    feature.playingStatusId = updates.playingStatus.sink { status in
+      if status == .ended && feature.enabled {
+        self.seekTo(seconds: 0.0)
+        self.play()
       }
     }
+  }
 
-    /**
-         Feature to play the current playing audio on repeat until feature is disabled.
-         */
-    public struct Loop {
-      static var enabled: Bool = false
-      static var playingStatusId: UInt?
+  /**
+   Disable feature playing audio on loop.
+   */
+  public func stopLooping() {
+    let feature = self.features[Loop.self]
+    feature.enabled = false
+  }
+}
 
-      /**
-             Enable feature to play the current playing audio on loop. This will continue until the feature is disabled. And this feature works for both remote and saved audio.
-             */
-      public static func enable() {
-        enabled = true
+/**
+ Feature to pause the player after a delay. This will happen regardless of if another audio clip has started.
+ */
+public class SleepTimer: PlayerFeature {
+  var timer: Timer? = nil
+  required init() { }
+}
 
-        guard playingStatusId == nil else { return }
+extension SAPlayer {
+  /**
+   Enable feature to pause the player after a delay. This will happen regardless of if another audio clip has started.
 
-        Task {
-          playingStatusId = await SAPlayer.Updates.PlayingStatus.subscribe({ (status) in
-            if status == .ended && enabled {
-              SAPlayer.shared.seekTo(seconds: 0.0)
-              SAPlayer.shared.play()
-            }
-          })
-        }
-      }
-
-      /**
-             Disable feature playing audio on loop.
-             */
-      public static func disable() {
-        enabled = false
-      }
-
+   - Parameter afterDelay: The number of seconds to wait before pausing the audio
+   */
+  public func sleepTimer(afterDelay delay: Double) {
+    let feature = self.features[SleepTimer.self]
+    if let existingTimer = feature.timer {
+      existingTimer.invalidate()
     }
+
+    feature.timer = Timer.scheduledTimer(
+      withTimeInterval: delay, repeats: false,
+      block: { _ in
+        self.pause()
+      })
+  }
+
+  /**
+   Disable feature to pause the player after a delay.
+   */
+  public func disableSleepTimer() {
+    let feature = self.features[SleepTimer.self]
+    feature.timer?.invalidate()
   }
 }

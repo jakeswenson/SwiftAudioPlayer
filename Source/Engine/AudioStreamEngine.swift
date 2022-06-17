@@ -31,6 +31,8 @@
 
 import AVFoundation
 import Foundation
+import Combine
+import Atomics
 
 /// Start of the streaming chain. Get PCM buffer from lower chain and feed it to
 /// engine
@@ -66,12 +68,15 @@ class AudioStreamEngine: AudioEngine {
 
   //Fields
   private var currentTimeOffset: TimeInterval = 0
-  private var streamChangeListenerId: UInt?
 
-  private var numberOfBuffersScheduledInTotal = 0 {
-    didSet {
-      Log.debug("number of buffers scheduled in total: \(numberOfBuffersScheduledInTotal)")
-      if numberOfBuffersScheduledInTotal == 0 {
+  private var _innerTotalNumScheduledBuffers = ManagedAtomic(0)
+
+  private var numberOfBuffersScheduledInTotal: Int {
+    get { _innerTotalNumScheduledBuffers.load(ordering: .sequentiallyConsistent) }
+    set {
+      _innerTotalNumScheduledBuffers.store(newValue, ordering: .sequentiallyConsistent)
+      Log.debug("number of buffers scheduled in total: \(newValue)")
+      if newValue == 0 {
         if playingStatus == .playing { wasPlaying = true }
         pause()
         //                delegate?.didError()
@@ -80,7 +85,7 @@ class AudioStreamEngine: AudioEngine {
         // TODO: "Make this a legitimate warning to user about needing more data from stream"
       }
 
-      if numberOfBuffersScheduledInTotal > MIN_BUFFERS_TO_BE_PLAYABLE && wasPlaying {
+      if newValue > MIN_BUFFERS_TO_BE_PLAYABLE && wasPlaying {
         wasPlaying = false
         play()
       }
@@ -138,12 +143,15 @@ class AudioStreamEngine: AudioEngine {
     }
   }
 
-  init(withRemoteUrl url: AudioURL, delegate: AudioEngineDelegate?, bitrate: SAPlayerBitrate, audioModifiers: [AVAudioNode] = []) {
+  private var progressCancelable: AnyCancellable? = nil
+
+  init(withRemoteUrl url: AudioURL, delegate: AudioEngineDelegate?, bitrate: SAPlayerBitrate, updates: AudioUpdates, audioModifiers: [AVAudioNode] = []) {
     Log.info(url)
     super.init(
       url: url,
       delegate: delegate,
       engineAudioFormat: AudioEngine.defaultEngineAudioFormat,
+      updates: updates,
       audioModifiers: audioModifiers)
 
     PCM_BUFFER_SIZE = bitrate.pcmBufferSize
@@ -151,23 +159,18 @@ class AudioStreamEngine: AudioEngine {
     do {
       converter = try AudioConverter(
         withRemoteUrl: url,
+        updates: updates,
         toEngineAudioFormat: AudioEngine.defaultEngineAudioFormat,
         withPCMBufferSize: PCM_BUFFER_SIZE)
     } catch {
       delegate?.didError()
     }
 
-    let director = StreamingDownloadDirector.shared
-    director.setKey(key)
-    Task {
-      director.resetCache()
+    progressCancelable = updates.streamingDownloadProgress.sink { [weak self] _ in
+      guard let self = self else { return }
 
-      streamChangeListenerId = await director.attach { [weak self] (progress) in
-        guard let self = self else { return }
-
-        // polling for buffers when we receive data. This won't be throttled on fresh new audio or seeked audio but in all other cases it most likely will be throttled
-        self.pollForNextBuffer()  //  no buffer updates because thread issues if I try to update buffer status in streaming listener
-      }
+      // polling for buffers when we receive data. This won't be throttled on fresh new audio or seeked audio but in all other cases it most likely will be throttled
+      self.pollForNextBuffer()  //  no buffer updates because thread issues if I try to update buffer status in streaming listener
     }
 
     let timeInterval = 1 / (converter.engineAudioFormat.sampleRate / Double(PCM_BUFFER_SIZE))
@@ -180,9 +183,7 @@ class AudioStreamEngine: AudioEngine {
   }
 
   deinit {
-    if let id = streamChangeListenerId {
-      StreamingDownloadDirector.shared.detach(withID: id)
-    }
+    progressCancelable?.cancel()
   }
 
   private func repeatedUpdates() {

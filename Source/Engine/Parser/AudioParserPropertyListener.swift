@@ -51,15 +51,16 @@ func ParserPropertyListener(
     break
   case kAudioFileStreamProperty_AudioDataByteCount:
     GetPropertyValue(&selfAudioParser.parsedAudioPacketDataSize, streamId, propertyId)
-    selfAudioParser.expectedFileSizeInBytes =
-      selfAudioParser.parsedAudioDataOffset + selfAudioParser.parsedAudioPacketDataSize
+    let result = selfAudioParser.parsedAudioDataOffset + selfAudioParser.parsedAudioPacketDataSize
+    selfAudioParser.expectedFileSizeInBytes.store(result, ordering: .sequentiallyConsistent)
+
     break
   case kAudioFileStreamProperty_DataOffset:
     GetPropertyValue(&selfAudioParser.parsedAudioDataOffset, streamId, propertyId)
 
     if selfAudioParser.parsedAudioPacketDataSize != 0 {
-      selfAudioParser.expectedFileSizeInBytes =
-        selfAudioParser.parsedAudioDataOffset + selfAudioParser.parsedAudioPacketDataSize
+      let result = selfAudioParser.parsedAudioDataOffset + selfAudioParser.parsedAudioPacketDataSize
+      selfAudioParser.expectedFileSizeInBytes.store(result, ordering: .sequentiallyConsistent)
     }
 
     break

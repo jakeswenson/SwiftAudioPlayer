@@ -32,12 +32,13 @@
 import AVFoundation
 import AudioToolbox
 import Foundation
+import Atomics
 
 protocol AudioConvertable {
   var engineAudioFormat: AVAudioFormat { get }
 
   init(
-    withRemoteUrl url: AudioURL, toEngineAudioFormat: AVAudioFormat,
+    withRemoteUrl url: AudioURL, updates: AudioUpdates, toEngineAudioFormat: AVAudioFormat,
     withPCMBufferSize size: AVAudioFrameCount) throws
   func pullBuffer() throws -> AVAudioPCMBuffer
   func pollPredictedDuration() -> Duration?
@@ -69,10 +70,11 @@ class AudioConverter: AudioConvertable {
   var parser: AudioParsable!
 
   //From protocol
-  public var engineAudioFormat: AVAudioFormat
+  public private(set) var engineAudioFormat: AVAudioFormat
   let pcmBufferSize: AVAudioFrameCount
 
   //Field
+  @Atomic
   var converter: AudioConverterRef?  //set by AudioConverterNew
   var currentAudioPacketIndex: AVAudioPacketCount = 0
 
@@ -81,7 +83,7 @@ class AudioConverter: AudioConvertable {
   var converterDescriptions: UnsafeMutablePointer<AudioStreamPacketDescription>?
 
   required init(
-    withRemoteUrl url: AudioURL, toEngineAudioFormat: AVAudioFormat,
+    withRemoteUrl url: AudioURL, updates: AudioUpdates, toEngineAudioFormat: AVAudioFormat,
     withPCMBufferSize size: AVAudioFrameCount
   ) throws {
     self.engineAudioFormat = toEngineAudioFormat
@@ -90,6 +92,7 @@ class AudioConverter: AudioConvertable {
     do {
       parser = try AudioParser(
         withRemoteUrl: url,
+        updates: updates,
         bufferSize: Int(size),
         parsedFileAudioFormatCallback: {
           [weak self] (fileAudioFormat: AVAudioFormat) in
